@@ -1,0 +1,139 @@
+{
+  "solidity": {
+    "compilers": [
+      {
+        "version": "0.8.27",
+        "settings": {
+          "evmVersion": "paris",
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      }
+    ],
+    "overrides": {}
+  },
+  "networks": {
+    "hardhat": {
+      "hardfork": "cancun",
+      "blockGasLimit": 30000000,
+      "gasPrice": "auto",
+      "chainId": 31337,
+      "throwOnTransactionFailures": true,
+      "throwOnCallFailures": true,
+      "allowUnlimitedContractSize": false,
+      "mining": {
+        "auto": true,
+        "interval": 0,
+        "mempool": {
+          "order": "priority"
+        }
+      },
+      "accounts": {
+        "initialIndex": 0,
+        "count": 20,
+        "path": "m/44'/60'/0'/0",
+        "passphrase": "",
+        "mnemonic": "test test test test test test test test test test test junk",
+        "accountsBalance": "10000000000000000000000"
+      },
+      "loggingEnabled": false,
+      "gasMultiplier": 1,
+      "minGasPrice": "0",
+      "chains": {},
+      "gas": 30000000,
+      "initialDate": "2024-10-23T05:14:30.946Z",
+      "ignition": {}
+    },
+    "localhost": {
+      "accounts": "remote",
+      "gas": "auto",
+      "gasPrice": "auto",
+      "gasMultiplier": 1,
+      "httpHeaders": {},
+      "timeout": 40000,
+      "url": "http://127.0.0.1:8545",
+      "ignition": {}
+    },
+    "polygonTestnet": {
+      "accounts": [
+        "0x02b77ffc242e94b713acbbc74129ec2f26958c1009c715723dbaa2900f2077c4"
+      ],
+      "gas": "auto",
+      "gasPrice": "auto",
+      "gasMultiplier": 1,
+      "httpHeaders": {},
+      "timeout": 20000,
+      "url": "https://rpc-amoy.polygon.technology",
+      "ignition": {}
+    },
+    "forkingPolygonTestnet": {
+      "accounts": [
+        "0x02b77ffc242e94b713acbbc74129ec2f26958c1009c715723dbaa2900f2077c4"
+      ],
+      "gas": "auto",
+      "gasPrice": "auto",
+      "gasMultiplier": 1,
+      "httpHeaders": {},
+      "timeout": 20000,
+      "url": "http://127.0.0.1:8545",
+      "ignition": {}
+    }
+  },
+  "defaultNetwork": "hardhat",
+  "paths": {
+    "root": "/home/chanyut/projects/apex/iai-project/smartcontract",
+    "configFile": "/home/chanyut/projects/apex/iai-project/smartcontract/hardhat.config.ts",
+    "sources": "/home/chanyut/projects/apex/iai-project/smartcontract/contracts",
+    "cache": "/home/chanyut/projects/apex/iai-project/smartcontract/cache",
+    "artifacts": "/home/chanyut/projects/apex/iai-project/smartcontract/artifacts",
+    "tests": "/home/chanyut/projects/apex/iai-project/smartcontract/test",
+    "ignition": "/home/chanyut/projects/apex/iai-project/smartcontract/ignition"
+  },
+  "mocha": {
+    "timeout": 40000
+  },
+  "etherscan": {
+    "apiKey": "",
+    "customChains": [],
+    "enabled": true
+  },
+  "sourcify": {
+    "enabled": false,
+    "apiUrl": "https://sourcify.dev/server",
+    "browserUrl": "https://repo.sourcify.dev"
+  },
+  "blockscout": {
+    "enabled": false,
+    "customChains": []
+  },
+  "ignition": {},
+  "typechain": {
+    "outDir": "typechain-types",
+    "target": "ethers-v6",
+    "alwaysGenerateOverloads": false,
+    "discriminateTypes": false,
+    "tsNocheck": false,
+    "dontOverrideCompile": false,
+    "node16Modules": false
+  },
+  "gasReporter": {
+    "enabled": false,
+    "currency": "USD"
+  }
+}

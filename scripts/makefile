@@ -23,6 +23,10 @@ define run-contract-deployment
 $(call run-script,$(1),$(2),$(3),--contracts $(CONTRACTS_DIR))
 endef
 
+define run-deploy-all
+npx ts-node --files ../scripts/cmd/$(1).ts --network $(2) --contracts $(CONTRACTS_DIR)
+endef
+
 # Polygon Testnet specific tasks
 deploy-iai-token-polygon-testnet:
 	$(call run-contract-deployment,deploy-iai-token,$(POLYGON_IAI_TOKEN_INPUT),$(POLYGON_TESTNET))
@@ -36,6 +40,9 @@ deploy-reward-distributor-polygon-testnet:
 add-funds-polygon-testnet:
 	$(call run-script,add-funds-to-reward-distributor,$(POLYGON_ADD_FUNDS_INPUT),$(POLYGON_TESTNET))
 
+deploy-all-polygon-testnet:
+	$(call run-deploy-all,deploy-all,$(POLYGON_TESTNET))
+
 # Forking Polygon Testnet specific tasks (using same input files)
 deploy-iai-token-forking-polygon-testnet:
 	$(call run-contract-deployment,deploy-iai-token,$(POLYGON_IAI_TOKEN_INPUT),$(FORKING_POLYGON_TESTNET))
@@ -48,3 +55,6 @@ deploy-reward-distributor-forking-polygon-testnet:
 
 add-funds-forking-polygon-testnet:
 	$(call run-script,add-funds-to-reward-distributor,$(POLYGON_ADD_FUNDS_INPUT),$(FORKING_POLYGON_TESTNET))
+
+deploy-all-forking-polygon-testnet:
+	$(call run-deploy-all,deploy-all,$(FORKING_POLYGON_TESTNET))

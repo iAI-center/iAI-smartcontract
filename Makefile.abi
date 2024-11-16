@@ -1,0 +1,14 @@
+.PHONY: default all callhelper reward-distributor
+
+default: all
+
+all: callhelper reward-distributor
+
+ensure-dir:
+	mkdir -p abi
+
+callhelper: ensure-dir
+	npx ts-node scripts/extract-abi.ts artifacts/contracts/CallHelper.sol/CallHelper.json ./abi/CallHelper.json
+
+reward-distributor: ensure-dir
+	npx ts-node scripts/extract-abi.ts artifacts/contracts/RewardDistributor.sol/RewardDistributor.json ./abi/RewardDistributor.json

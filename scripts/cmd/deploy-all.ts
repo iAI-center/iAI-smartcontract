@@ -1,9 +1,9 @@
 import { Command } from "commander";
-import cliHelper from "./cli-helper";
-import { ethers } from "hardhat";
+import { Signer, Wallet } from "ethers";
 import * as hre from "hardhat";
+import { ethers } from "hardhat";
 import * as path from "path";
-import * as fs from "fs";
+import cliHelper from "./cli-helper";
 
 interface DeploymentResult {
     address: string;
@@ -132,9 +132,11 @@ async function verifyDeployment(
     callHelperAddress: string,
     iaiTokenAddress: string,
     rewardDistributorAddress: string,
-    deployer: any
+    deployer: Signer | Wallet
 ) {
     console.log("\n=== Running Post-Deployment Verification ===");
+
+    const deployerAddress = await deployer.getAddress();
 
     // Verify CallHelper
     const callHelper = await ethers.getContractAt(
@@ -144,7 +146,7 @@ async function verifyDeployment(
     const CALLER_ROLE = await callHelper.CALLER_ROLE();
     const deployerHasCallerRole = await callHelper.hasRole(
         CALLER_ROLE,
-        deployer.address
+        deployerAddress
     );
     console.log("CallHelper has CALLER_ROLE:", deployerHasCallerRole);
 
@@ -175,7 +177,7 @@ async function verifyDeployment(
     console.log("\nTesting basic integration:");
 
     // 1. Mint some tokens
-    const mintTx = await iaiToken.mint(deployer.address, MINT_AMOUNT);
+    const mintTx = await iaiToken.mint(deployerAddress, MINT_AMOUNT);
     await mintTx.wait();
     console.log("Minted tokens:", ethers.formatEther(MINT_AMOUNT));
 
@@ -201,6 +203,14 @@ async function verifyDeployment(
         ethers.formatEther(distributorBalance)
     );
 
+    // 5. Distribute rewards
+    const distributeTx = await rewardDistributor.distribute(
+        [deployerAddress],
+        [ethers.parseEther("1.5")]
+    );
+    await distributeTx.wait();
+    console.log("Distributed rewards");
+
     console.log("\n✅ Post-deployment verification completed successfully");
 }
 
@@ -215,7 +225,7 @@ async function verifyDeployment(
     console.log("Deploying contracts with account:", deployer.address);
     console.log(
         "Account balance:",
-        (await ethers.provider.getBalance(deployer.address)).toString()
+        ethers.formatEther(await ethers.provider.getBalance(deployer.address))
     );
 
     console.log("Compiling contracts...");
@@ -230,6 +240,10 @@ async function verifyDeployment(
     );
     console.log(`CallHelper deployed at: ${callHelperResult.address}`);
 
+    console.log(
+        "Account balance:",
+        ethers.formatEther(await ethers.provider.getBalance(deployer.address))
+    );
     const iaiTokenResult = await deployIAIToken(
         deployer,
         network,
@@ -237,6 +251,10 @@ async function verifyDeployment(
     );
     console.log(`iAI Token deployed at: ${iaiTokenResult.address}`);
 
+    console.log(
+        "Account balance:",
+        ethers.formatEther(await ethers.provider.getBalance(deployer.address))
+    );
     const rewardDistributorResult = await deployRewardDistributor(
         iaiTokenResult.address,
         network,
@@ -245,6 +263,30 @@ async function verifyDeployment(
     console.log(
         `RewardDistributor deployed at: ${rewardDistributorResult.address}`
     );
+
+    // Add prompt for minting tokens
+    const confirmMintIAI = await cliHelper.confirmPromptMessage(
+        "\nDo you want to mint 1,000,000 iAI tokens to RewardDistributor?"
+    );
+
+    if (confirmMintIAI) {
+        const iaiToken = await ethers.getContractAt(
+            "IAIToken",
+            iaiTokenResult.address
+        );
+        const mintAmount = ethers.parseEther("1000000");
+        console.log("\nMinting 1,000,000 iAI tokens to RewardDistributor...");
+        const mintTx = await iaiToken.mint(
+            rewardDistributorResult.address,
+            mintAmount
+        );
+        await mintTx.wait();
+        console.log(
+            `✅ Successfully minted ${ethers.formatEther(
+                mintAmount
+            )} iAI tokens to RewardDistributor`
+        );
+    }
 
     // Write final deployment summary
     const summaryDir = path.join(".", "out", network, "deployment", "summary");

@@ -1,0 +1,4 @@
+{
+    "__comment": "Address of the ERC20 token to be used as reward",
+    "rewardTokenAddress": "0x0000000000000000000000000000000000000000"
+}

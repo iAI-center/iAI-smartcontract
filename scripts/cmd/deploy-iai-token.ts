@@ -1,31 +1,27 @@
 import { Command } from "commander";
-
 import cliHelper from "./cli-helper";
-
 import { ethers } from "hardhat";
 import * as hre from "hardhat";
 import * as path from "path";
-
-const program = new Command("deploy-iai-token")
-    .description("deploy iAI token")
-    // .requiredOption(
-    //     "--input [value]",
-    //     "path to input file for example: cmd-input/deploy-moonmedal-testnet"
-    // )
-    .option("--network [value]", "specific network")
-    .parse(process.argv);
+import * as fs from "fs";
 
 interface Input {}
 
+const program = new Command("deploy-iai-token")
+    .description("deploy iAI token")
+    .requiredOption("--input <path>", "path to input JSON file")
+    .requiredOption("--network <network>", "network to deploy to")
+    .parse(process.argv);
+
 (async (): Promise<void> => {
     const { input: inputFilePath, network } = program.opts();
+    const inputContent = fs.readFileSync(inputFilePath, "utf-8");
+    const input = JSON.parse(inputContent) as Input;
 
-    if (network) {
-        console.log(`changing network to: ${network} ...`);
-        await hre.changeNetwork(network);
-        console.log(`changed network to: ${network} ...`);
-        console.log(hre.config["networks"][network]);
-    }
+    console.log(`changing network to: ${network} ...`);
+    await hre.changeNetwork(network);
+    console.log(`changed network to: ${network} ...`);
+    console.log(hre.config["networks"][network]);
 
     const [deployer] = await ethers.getSigners();
     console.log("deploying contract with the account:", deployer.address);

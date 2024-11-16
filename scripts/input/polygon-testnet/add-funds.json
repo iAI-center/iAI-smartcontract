@@ -1,0 +1,6 @@
+{
+    "__comment": "Configuration for adding funds to the reward distributor",
+    "distributor": "0x0000000000000000000000000000000000000000",
+    "token": "0x0000000000000000000000000000000000000000",
+    "amount": "1000"
+}

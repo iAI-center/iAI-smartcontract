@@ -1,27 +1,27 @@
 import { Command } from "commander";
-
 import cliHelper from "./cli-helper";
-
 import { ethers } from "hardhat";
 import * as hre from "hardhat";
 import * as path from "path";
-
-const program = new Command("deploy-callhelper")
-    .description("deploy CallHelper contract")
-    .option("--network [value]", "specific network")
-    .parse(process.argv);
+import * as fs from "fs";
 
 interface Input {}
 
-(async (): Promise<void> => {
-    const { network } = program.opts();
+const program = new Command("deploy-callhelper")
+    .description("deploy CallHelper contract")
+    .requiredOption("--input <path>", "path to input JSON file")
+    .requiredOption("--network <network>", "network to deploy to")
+    .parse(process.argv);
 
-    if (network) {
-        console.log(`changing network to: ${network} ...`);
-        await hre.changeNetwork(network);
-        console.log(`changed network to: ${network} ...`);
-        console.log(hre.config["networks"][network]);
-    }
+(async (): Promise<void> => {
+    const { input: inputFilePath, network } = program.opts();
+    const inputContent = fs.readFileSync(inputFilePath, "utf-8");
+    const input = JSON.parse(inputContent) as Input;
+
+    console.log(`changing network to: ${network} ...`);
+    await hre.changeNetwork(network);
+    console.log(`changed network to: ${network} ...`);
+    console.log(hre.config["networks"][network]);
 
     const [deployer] = await ethers.getSigners();
     console.log("deploying contract with the account:", deployer.address);

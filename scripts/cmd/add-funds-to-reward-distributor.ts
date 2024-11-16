@@ -2,31 +2,33 @@ import { Command } from "commander";
 import * as hre from "hardhat";
 import { ethers } from "hardhat";
 import * as path from "path";
+import * as fs from "fs";
 import {
     IAIToken__factory,
     RewardDistributor__factory,
 } from "../../typechain-types";
 import cliHelper from "./cli-helper";
 
+interface Input {
+    distributor: string;
+    token: string;
+    amount: string;
+}
+
 const program = new Command("add-funds-to-reward-distributor")
     .description("Add funds to RewardDistributor contract")
-    .option("--network [value]", "specific network")
-    .requiredOption(
-        "--distributor <address>",
-        "reward distributor contract address"
-    )
-    .requiredOption("--token <address>", "reward token address")
-    .requiredOption("--amount <value>", "fund amount in token units")
+    .requiredOption("--input <path>", "path to input JSON file")
+    .requiredOption("--network <network>", "network to deploy to")
     .parse(process.argv);
 
 (async (): Promise<void> => {
-    const { network, distributor, token, amount } = program.opts();
+    const { input: inputFilePath, network } = program.opts();
+    const inputContent = fs.readFileSync(inputFilePath, "utf-8");
+    const { distributor, token, amount } = JSON.parse(inputContent) as Input;
 
-    if (network) {
-        console.log(`changing network to: ${network} ...`);
-        await hre.changeNetwork(network);
-        console.log(`changed network to: ${network}`);
-    }
+    console.log(`changing network to: ${network} ...`);
+    await hre.changeNetwork(network);
+    console.log(`changed network to: ${network}`);
 
     const [signer] = await ethers.getSigners();
     console.log("using account:", signer.address);

@@ -1,31 +1,29 @@
 import { Command } from "commander";
-
 import cliHelper from "./cli-helper";
-
 import { ethers } from "hardhat";
 import * as hre from "hardhat";
 import * as path from "path";
+import * as fs from "fs";
+
+interface Input {
+    rewardTokenAddress: string;
+}
 
 const program = new Command("deploy-reward-distributor")
     .description("deploy RewardDistributor contract")
-    .option("--network [value]", "specific network")
-    .option(
-        "--reward-token-address <address>",
-        "address of the reward token contract"
-    )
+    .requiredOption("--input <path>", "path to input JSON file")
+    .requiredOption("--network <network>", "network to deploy to")
     .parse(process.argv);
 
-interface Input {}
-
 (async (): Promise<void> => {
-    const { network, rewardTokenAddress } = program.opts();
+    const { input: inputFilePath, network } = program.opts();
+    const inputContent = fs.readFileSync(inputFilePath, "utf-8");
+    const { rewardTokenAddress } = JSON.parse(inputContent) as Input;
 
-    if (network) {
-        console.log(`changing network to: ${network} ...`);
-        await hre.changeNetwork(network);
-        console.log(`changed network to: ${network} ...`);
-        console.log(hre.config["networks"][network]);
-    }
+    console.log(`changing network to: ${network} ...`);
+    await hre.changeNetwork(network);
+    console.log(`changed network to: ${network} ...`);
+    console.log(hre.config["networks"][network]);
 
     const [deployer] = await ethers.getSigners();
     console.log("deploying contract with the account:", deployer.address);

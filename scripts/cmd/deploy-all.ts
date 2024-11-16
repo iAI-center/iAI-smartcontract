@@ -128,6 +128,82 @@ async function deployRewardDistributor(
     return { address: deployedAddress, txHash: deployedTx?.hash };
 }
 
+async function verifyDeployment(
+    callHelperAddress: string,
+    iaiTokenAddress: string,
+    rewardDistributorAddress: string,
+    deployer: any
+) {
+    console.log("\n=== Running Post-Deployment Verification ===");
+
+    // Verify CallHelper
+    const callHelper = await ethers.getContractAt(
+        "CallHelper",
+        callHelperAddress
+    );
+    const CALLER_ROLE = await callHelper.CALLER_ROLE();
+    const deployerHasCallerRole = await callHelper.hasRole(
+        CALLER_ROLE,
+        deployer.address
+    );
+    console.log("CallHelper has CALLER_ROLE:", deployerHasCallerRole);
+
+    // Verify IAIToken
+    const iaiToken = await ethers.getContractAt("IAIToken", iaiTokenAddress);
+    const tokenName = await iaiToken.name();
+    const tokenSymbol = await iaiToken.symbol();
+    const tokenDecimals = await iaiToken.decimals();
+    console.log("IAIToken details verified:", {
+        name: tokenName,
+        symbol: tokenSymbol,
+        decimals: tokenDecimals,
+    });
+
+    // Verify RewardDistributor
+    const rewardDistributor = await ethers.getContractAt(
+        "RewardDistributor",
+        rewardDistributorAddress
+    );
+    const rewardToken = await rewardDistributor.rewardToken();
+    console.log(
+        "RewardDistributor reward token verified:",
+        rewardToken === iaiTokenAddress
+    );
+
+    // Test basic integration
+    const MINT_AMOUNT = ethers.parseEther("1000");
+    console.log("\nTesting basic integration:");
+
+    // 1. Mint some tokens
+    const mintTx = await iaiToken.mint(deployer.address, MINT_AMOUNT);
+    await mintTx.wait();
+    console.log("Minted tokens:", ethers.formatEther(MINT_AMOUNT));
+
+    // 2. Approve RewardDistributor to spend tokens
+    const approveTx = await iaiToken.approve(
+        rewardDistributorAddress,
+        MINT_AMOUNT
+    );
+    await approveTx.wait();
+    console.log("Approved RewardDistributor to spend tokens");
+
+    // 3. Fund RewardDistributor
+    const fundTx = await rewardDistributor.addFunds(MINT_AMOUNT);
+    await fundTx.wait();
+    console.log("Funded RewardDistributor");
+
+    // 4. Verify RewardDistributor balance
+    const distributorBalance = await iaiToken.balanceOf(
+        rewardDistributorAddress
+    );
+    console.log(
+        "RewardDistributor balance:",
+        ethers.formatEther(distributorBalance)
+    );
+
+    console.log("\n✅ Post-deployment verification completed successfully");
+}
+
 (async (): Promise<void> => {
     const { network, contracts: contractsPath } = program.opts();
 
@@ -182,6 +258,24 @@ async function deployRewardDistributor(
         summaryDir,
         "deployment-summary.json"
     );
+
+    // Add post-deployment verification for forked networks
+    if (network.toLowerCase().includes("forking")) {
+        console.log(
+            "\nForked network detected - running post-deployment verification"
+        );
+        try {
+            await verifyDeployment(
+                callHelperResult.address,
+                iaiTokenResult.address,
+                rewardDistributorResult.address,
+                deployer
+            );
+        } catch (error) {
+            console.error("❌ Post-deployment verification failed:", error);
+            process.exit(1);
+        }
+    }
 
     console.log(
         "\nDeployment Complete! Summary written to:",

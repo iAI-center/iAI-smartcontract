@@ -7,12 +7,12 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract RewardDistributor is AccessControl, ReentrancyGuard {
     bytes32 public constant DISTRIBUTOR_ROLE = keccak256("DISTRIBUTOR_ROLE");
-    IERC20 public token;
+    IERC20 public rewardToken;
 
     constructor(IERC20 _token) {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(DISTRIBUTOR_ROLE, msg.sender);
-        token = _token;
+        rewardToken = _token;
     }
 
     event FundsAdded(address indexed admin, uint256 amount);
@@ -25,7 +25,7 @@ contract RewardDistributor is AccessControl, ReentrancyGuard {
     function addFunds(uint256 amount) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(amount > 0, "Must send some tokens");
         require(
-            token.transferFrom(msg.sender, address(this), amount),
+            rewardToken.transferFrom(msg.sender, address(this), amount),
             "Token transfer failed"
         );
         emit FundsAdded(msg.sender, amount);
@@ -42,11 +42,11 @@ contract RewardDistributor is AccessControl, ReentrancyGuard {
 
         for (uint256 i = 0; i < recipients.length; i++) {
             require(
-                token.balanceOf(address(this)) >= amounts[i],
+                rewardToken.balanceOf(address(this)) >= amounts[i],
                 "Insufficient token balance in contract"
             );
             require(
-                token.transfer(recipients[i], amounts[i]),
+                rewardToken.transfer(recipients[i], amounts[i]),
                 "Token transfer failed"
             );
             emit TokensDistributed(msg.sender, recipients[i], amounts[i]);

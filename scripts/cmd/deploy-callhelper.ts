@@ -37,7 +37,10 @@ const program = new Command("deploy-callhelper")
     console.log("getting contract factory for CallHelper...");
     const CallHelper = await ethers.getContractFactory("CallHelper");
     console.log("deploying CallHelper contract...");
-    const deployed = await CallHelper.deploy();
+    const deployed = await CallHelper.deploy(
+        deployer.address,
+        deployer.address
+    );
     await deployed.waitForDeployment();
     const deployedTx = deployed.deploymentTransaction();
     const deployedAddress = await deployed.getAddress();

@@ -17,6 +17,7 @@ contract CallHelper is AccessControl, Pausable {
     constructor(address defaultAdmin, address admin) {
         _grantRole(DEFAULT_ADMIN_ROLE, defaultAdmin);
         _grantRole(ADMIN_ROLE, admin);
+        _grantRole(CALLER_ROLE, admin);
     }
 
     function call(

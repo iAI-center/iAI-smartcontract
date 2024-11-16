@@ -11,10 +11,15 @@ const program = new Command("deploy-iai-token")
     .description("deploy iAI token")
     .requiredOption("--input <path>", "path to input JSON file")
     .requiredOption("--network <network>", "network to deploy to")
+    .requiredOption("--contracts <path>", "path to contracts directory")
     .parse(process.argv);
 
 (async (): Promise<void> => {
-    const { input: inputFilePath, network } = program.opts();
+    const {
+        input: inputFilePath,
+        network,
+        contracts: contractsPath,
+    } = program.opts();
     const inputContent = fs.readFileSync(inputFilePath, "utf-8");
     const input = JSON.parse(inputContent) as Input;
 
@@ -78,9 +83,9 @@ const program = new Command("deploy-iai-token")
     // flatten sol file to output dir ...
     console.log("flattening sol file...");
     await cliHelper.flattenSolidity2File(
-        ["./contracts/IAIToken.sol"],
+        [path.join(contractsPath, "IAI.sol")],
         outDir,
-        "USDT.flatten.sol"
+        "IAI.flatten.sol"
     );
     console.log("flattened sol file... done");
 })();

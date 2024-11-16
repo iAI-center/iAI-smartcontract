@@ -11,10 +11,15 @@ const program = new Command("deploy-callhelper")
     .description("deploy CallHelper contract")
     .requiredOption("--input <path>", "path to input JSON file")
     .requiredOption("--network <network>", "network to deploy to")
+    .requiredOption("--contracts <path>", "path to contracts directory")
     .parse(process.argv);
 
 (async (): Promise<void> => {
-    const { input: inputFilePath, network } = program.opts();
+    const {
+        input: inputFilePath,
+        network,
+        contracts: contractsPath,
+    } = program.opts();
     const inputContent = fs.readFileSync(inputFilePath, "utf-8");
     const input = JSON.parse(inputContent) as Input;
 
@@ -86,7 +91,7 @@ const program = new Command("deploy-callhelper")
     // flatten sol file to output dir ...
     console.log("flattening sol file...");
     await cliHelper.flattenSolidity2File(
-        ["./contracts/CallHelper.sol"],
+        [path.join(contractsPath, "CallHelper.sol")],
         outDir,
         "CallHelper.flatten.sol"
     );

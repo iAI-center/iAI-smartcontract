@@ -13,10 +13,15 @@ const program = new Command("deploy-reward-distributor")
     .description("deploy RewardDistributor contract")
     .requiredOption("--input <path>", "path to input JSON file")
     .requiredOption("--network <network>", "network to deploy to")
+    .requiredOption("--contracts <path>", "path to contracts directory")
     .parse(process.argv);
 
 (async (): Promise<void> => {
-    const { input: inputFilePath, network } = program.opts();
+    const {
+        input: inputFilePath,
+        network,
+        contracts: contractsPath,
+    } = program.opts();
     const inputContent = fs.readFileSync(inputFilePath, "utf-8");
     const { rewardTokenAddress } = JSON.parse(inputContent) as Input;
 
@@ -92,7 +97,7 @@ const program = new Command("deploy-reward-distributor")
     // flatten sol file to output dir ...
     console.log("flattening sol file...");
     await cliHelper.flattenSolidity2File(
-        ["./contracts/RewardDistributor.sol"],
+        [path.join(contractsPath, "RewardDistributor.sol")],
         outDir,
         "RewardDistributor.flatten.sol"
     );

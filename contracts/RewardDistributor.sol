@@ -10,8 +10,8 @@ contract RewardDistributor is AccessControl, ReentrancyGuard {
     IERC20 public token;
 
     constructor(IERC20 _token) {
-        grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        grantRole(DISTRIBUTOR_ROLE, msg.sender);
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(DISTRIBUTOR_ROLE, msg.sender);
         token = _token;
     }
 

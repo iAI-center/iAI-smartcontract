@@ -17,6 +17,8 @@ contract IAIToken is ERC20, ERC20Burnable, Ownable, ERC20Permit {
     {}
 
     function mint(address to, uint256 amount) public onlyOwner {
+        require(to != address(0), "IAIToken: mint to the zero address");
+        require(amount > 0, "IAIToken: mint amount should be greater than 0");
         _mint(to, amount);
     }
 }

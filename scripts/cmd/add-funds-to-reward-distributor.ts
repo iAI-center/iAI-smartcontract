@@ -57,23 +57,8 @@ const program = new Command("add-funds-to-reward-distributor")
             )} tokens`
         );
         const needed = fundAmountWei - balance;
-
-        const confirmation = await cliHelper.confirmPromptMessage(
-            `Do you want to mint ${ethers.formatUnits(
-                needed,
-                decimals
-            )} tokens?`
-        );
-
-        if (!confirmation) {
-            console.log("Minting cancelled. Exiting...");
-            process.exit(1);
-        }
-
-        console.log("Minting tokens...");
-        const mintTx = await tokenContract.mint(signer.address, needed);
-        await mintTx.wait();
-        console.log(`Minted ${ethers.formatUnits(needed, decimals)} tokens`);
+        console.log(`requires ${ethers.formatUnits(needed, decimals)} more`);
+        process.exit(1);
     }
 
     // Approve and add funds

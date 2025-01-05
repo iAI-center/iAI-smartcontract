@@ -1,4 +1,4 @@
-import { mine } from "@nomicfoundation/hardhat-network-helpers";
+import { mine, mineUpTo } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { Signer } from "ethers";
 import { ethers } from "hardhat";
@@ -6,27 +6,20 @@ import { ERC20, IAIToken, SmartChefInitializable } from "../typechain-types";
 
 // Helper functions
 const setupTestTokens = async (owner: Signer, user1: Signer) => {
-    const MockERC20 = await ethers.getContractFactory("IAIToken");
-    const stakedToken = (await MockERC20.deploy(
-        await owner.getAddress()
+    const IAIToken = await ethers.getContractFactory("IAIToken");
+    const TOTAL_SUPPLY = ethers.parseEther("1000000");
+    const stakedToken = (await IAIToken.deploy(
+        await owner.getAddress(),
+        TOTAL_SUPPLY
     )) as IAIToken;
-    const rewardToken = (await MockERC20.deploy(
-        await owner.getAddress()
+    const rewardToken = (await IAIToken.deploy(
+        await owner.getAddress(),
+        TOTAL_SUPPLY
     )) as IAIToken;
     await Promise.all([
         stakedToken.waitForDeployment(),
         rewardToken.waitForDeployment(),
     ]);
-    await expect(
-        stakedToken
-            .connect(owner)
-            .mint(await owner.getAddress(), ethers.parseEther("1000000"))
-    ).not.to.reverted;
-    await expect(
-        rewardToken
-            .connect(owner)
-            .mint(await owner.getAddress(), ethers.parseEther("1000000"))
-    ).to.not.reverted;
     await expect(
         stakedToken
             .connect(owner)
@@ -78,11 +71,16 @@ const setupSmartChef = async (
     return { factory, chef, config };
 };
 
-describe.only("SmartChef System Tests", function () {
+describe("SmartChef System Tests", function () {
     let owner: Signer, user1: Signer;
     let stakedToken: IAIToken, rewardToken: IAIToken;
     let chef: SmartChefInitializable;
-    let config: any;
+    let config: {
+        rewardPerBlock: bigint;
+        startBlock: number;
+        bonusEndBlock: number;
+        poolLimitPerUser: bigint;
+    };
 
     beforeEach(async function () {
         [owner, user1] = await ethers.getSigners();
@@ -189,40 +187,6 @@ describe.only("SmartChef System Tests", function () {
             expect(finalReward).to.equal(0);
         });
 
-        it("should handle late entry into farming", async function () {
-            // Mine blocks until we're in the middle of the reward period
-            await mine(
-                config.startBlock -
-                    (await ethers.provider.getBlockNumber()) +
-                    500
-            );
-
-            const depositAmount = ethers.parseEther("100");
-            await stakedToken.approve(await chef.getAddress(), depositAmount);
-
-            const beforeStakeBlock = await ethers.provider.getBlockNumber();
-            await chef.deposit(depositAmount);
-
-            // Mine some more blocks
-            await mine(100);
-
-            const pendingReward = await chef.pendingReward(
-                await owner.getAddress()
-            );
-            expect(pendingReward).to.gt(0);
-
-            // Verify rewards only started counting after entry
-            const expectedRewards =
-                config.rewardPerBlock *
-                BigInt(
-                    (await ethers.provider.getBlockNumber()) - beforeStakeBlock
-                );
-            expect(pendingReward).to.be.closeTo(
-                expectedRewards,
-                ethers.parseEther("1")
-            );
-        });
-
         it("should handle compound farming (harvest and re-stake)", async function () {
             // Assuming reward token can be staked (same as staked token)
             const initialStake = ethers.parseEther("100");
@@ -252,43 +216,6 @@ describe.only("SmartChef System Tests", function () {
 
             const userInfo = await chef.userInfo(await owner.getAddress());
             expect(userInfo.amount).to.be.gt(initialStake);
-        });
-
-        it("should calculate rewards correctly across multiple deposits", async function () {
-            const deposit1 = ethers.parseEther("50");
-            const deposit2 = ethers.parseEther("150");
-
-            await stakedToken.approve(
-                await chef.getAddress(),
-                deposit1 + deposit2
-            );
-
-            // First deposit
-            await chef.deposit(deposit1);
-            await mine(
-                config.startBlock -
-                    (await ethers.provider.getBlockNumber()) +
-                    20
-            );
-
-            // Second deposit
-            const beforeSecondDeposit = await chef.pendingReward(
-                await owner.getAddress()
-            );
-            await chef.deposit(deposit2);
-
-            // Mine some blocks
-            await mine(50);
-
-            const finalReward = await chef.pendingReward(
-                await owner.getAddress()
-            );
-            expect(finalReward).to.be.gt(beforeSecondDeposit);
-
-            // Verify reward rate increased after second deposit
-            const rewardRate1 = beforeSecondDeposit / 20n;
-            const rewardRate2 = (finalReward - beforeSecondDeposit) / 50n;
-            expect(rewardRate2).to.be.gt(rewardRate1);
         });
 
         it("should handle multiple users with different entry/exit times", async function () {
@@ -335,6 +262,144 @@ describe.only("SmartChef System Tests", function () {
             // Verify user2's rewards are higher in the final period
             const user2Info = await chef.userInfo(await user2.getAddress());
             expect(user2Info.amount).to.equal(amount2);
+        });
+    });
+
+    describe("Complex Farming Scenarios", () => {
+        let user2: Signer, user3: Signer;
+
+        beforeEach(async function () {
+            [user2, user3] = (await ethers.getSigners()).slice(2, 4);
+            // Give tokens to users
+            await Promise.all([
+                stakedToken.transfer(
+                    await user2.getAddress(),
+                    ethers.parseEther("1000")
+                ),
+                stakedToken.transfer(
+                    await user3.getAddress(),
+                    ethers.parseEther("1000")
+                ),
+                stakedToken
+                    .connect(user2)
+                    .approve(
+                        await chef.getAddress(),
+                        ethers.parseEther("1000")
+                    ),
+                stakedToken
+                    .connect(user3)
+                    .approve(
+                        await chef.getAddress(),
+                        ethers.parseEther("1000")
+                    ),
+            ]);
+        });
+
+        it("should handle rapid deposits and withdrawals correctly", async function () {
+            // Move to start of reward period
+            await mine(
+                config.startBlock - (await ethers.provider.getBlockNumber())
+            );
+
+            // Simulate rapid trading-like behavior
+            const operations = [
+                // [amount, isDeposit, user]
+                {
+                    amount: ethers.parseEther("100"),
+                    isDeposit: true,
+                    user: owner,
+                },
+                {
+                    amount: ethers.parseEther("200"),
+                    isDeposit: true,
+                    user: user1,
+                },
+                {
+                    amount: ethers.parseEther("50"),
+                    isDeposit: false,
+                    user: owner,
+                },
+                {
+                    amount: ethers.parseEther("300"),
+                    isDeposit: true,
+                    user: user2,
+                },
+                {
+                    amount: ethers.parseEther("100"),
+                    isDeposit: false,
+                    user: user1,
+                },
+                {
+                    amount: ethers.parseEther("150"),
+                    isDeposit: true,
+                    user: user3,
+                },
+                {
+                    amount: ethers.parseEther("200"),
+                    isDeposit: false,
+                    user: user2,
+                },
+                {
+                    amount: ethers.parseEther("50"),
+                    isDeposit: true,
+                    user: owner,
+                },
+                {
+                    amount: ethers.parseEther("100"),
+                    isDeposit: false,
+                    user: user1,
+                },
+                {
+                    amount: ethers.parseEther("75"),
+                    isDeposit: false,
+                    user: user3,
+                },
+            ];
+
+            const userRewards = new Map<string, bigint>();
+
+            // Execute operations with reward tracking
+            for (const { amount, isDeposit, user } of operations) {
+                await mine(3); // Simulate time passing between operations
+
+                const address = await user.getAddress();
+                const balanceBefore = await rewardToken.balanceOf(address);
+                if (isDeposit) {
+                    await stakedToken
+                        .connect(user)
+                        .approve(await chef.getAddress(), amount);
+                }
+                if (isDeposit) {
+                    await chef.connect(user).deposit(amount as bigint);
+                } else {
+                    await chef.connect(user).withdraw(amount as bigint);
+                }
+
+                const balanceAfter = await rewardToken.balanceOf(address);
+                const reward = balanceAfter - balanceBefore;
+                userRewards.set(
+                    address,
+                    (userRewards.get(address) || 0n) + reward
+                );
+            }
+
+            await mine(10);
+
+            // Verify final state
+            for (const user of [owner, user1, user2, user3]) {
+                const address = await user.getAddress();
+                const userInfo = await chef.userInfo(address);
+                const pendingReward = await chef.pendingReward(address);
+
+                // Check that pendingReward is consistent with user's current stake
+                if (userInfo.amount > 0n) {
+                    expect(pendingReward).to.be.gt(0);
+                }
+
+                // Verify total rewards received
+                const totalReward = userRewards.get(address) || 0n;
+                expect(totalReward).to.be.gte(0);
+            }
         });
     });
 

@@ -10,6 +10,8 @@ interface DeploymentResult {
     txHash?: string;
 }
 
+const INITIAL_IAI_TOKEN_SUPPLY = ethers.parseEther("1000000000"); // 1 billion tokens
+
 const program = new Command("deploy-all")
     .description(
         "deploy all contracts (CallHelper, iAI Token, RewardDistributor)"
@@ -63,7 +65,10 @@ async function deployIAIToken(
 ): Promise<DeploymentResult> {
     console.log("\n=== Deploying iAI Token ===");
     const IAIToken = await ethers.getContractFactory("IAIToken");
-    const deployed = await IAIToken.deploy(deployer.address);
+    const deployed = await IAIToken.deploy(
+        deployer.address,
+        INITIAL_IAI_TOKEN_SUPPLY
+    );
     await deployed.waitForDeployment();
     const deployedTx = deployed.deploymentTransaction();
     const deployedAddress = await deployed.getAddress();
@@ -173,24 +178,19 @@ async function verifyDeployment(
     );
 
     // Test basic integration
-    const MINT_AMOUNT = ethers.parseEther("1000");
+    const REWARD_INITIAL_FUND_AMOUNT = ethers.parseEther("1000");
     console.log("\nTesting basic integration:");
-
-    // 1. Mint some tokens
-    const mintTx = await iaiToken.mint(deployerAddress, MINT_AMOUNT);
-    await mintTx.wait();
-    console.log("Minted tokens:", ethers.formatEther(MINT_AMOUNT));
 
     // 2. Approve RewardDistributor to spend tokens
     const approveTx = await iaiToken.approve(
         rewardDistributorAddress,
-        MINT_AMOUNT
+        REWARD_INITIAL_FUND_AMOUNT
     );
     await approveTx.wait();
     console.log("Approved RewardDistributor to spend tokens");
 
     // 3. Fund RewardDistributor
-    const fundTx = await rewardDistributor.addFunds(MINT_AMOUNT);
+    const fundTx = await rewardDistributor.addFunds(REWARD_INITIAL_FUND_AMOUNT);
     await fundTx.wait();
     console.log("Funded RewardDistributor");
 
@@ -263,30 +263,6 @@ async function verifyDeployment(
     console.log(
         `RewardDistributor deployed at: ${rewardDistributorResult.address}`
     );
-
-    // Add prompt for minting tokens
-    const confirmMintIAI = await cliHelper.confirmPromptMessage(
-        "\nDo you want to mint 1,000,000 iAI tokens to RewardDistributor?"
-    );
-
-    if (confirmMintIAI) {
-        const iaiToken = await ethers.getContractAt(
-            "IAIToken",
-            iaiTokenResult.address
-        );
-        const mintAmount = ethers.parseEther("1000000");
-        console.log("\nMinting 1,000,000 iAI tokens to RewardDistributor...");
-        const mintTx = await iaiToken.mint(
-            rewardDistributorResult.address,
-            mintAmount
-        );
-        await mintTx.wait();
-        console.log(
-            `✅ Successfully minted ${ethers.formatEther(
-                mintAmount
-            )} iAI tokens to RewardDistributor`
-        );
-    }
 
     // Write final deployment summary
     const summaryDir = path.join(".", "out", network, "deployment", "summary");

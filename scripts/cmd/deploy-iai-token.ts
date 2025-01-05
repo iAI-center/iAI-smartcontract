@@ -7,6 +7,8 @@ import * as fs from "fs";
 
 interface Input {}
 
+const INITIAL_IAI_TOKEN_SUPPLY = ethers.parseEther("1000000000"); // 1 billion tokens
+
 const program = new Command("deploy-iai-token")
     .description("deploy iAI token")
     .requiredOption("--input <path>", "path to input JSON file")
@@ -43,7 +45,10 @@ const program = new Command("deploy-iai-token")
     const adminWalletAddress = await adminWallet.getAddress();
 
     const IAIToken = await ethers.getContractFactory("IAIToken");
-    const deployed = await IAIToken.deploy(adminWalletAddress);
+    const deployed = await IAIToken.deploy(
+        adminWalletAddress,
+        INITIAL_IAI_TOKEN_SUPPLY
+    );
     await deployed.waitForDeployment();
     const deployedTx = deployed.deploymentTransaction();
     const deployedAddress = await deployed.getAddress();

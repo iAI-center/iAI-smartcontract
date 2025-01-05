@@ -20,9 +20,10 @@ describe("Contract Deployment and Integration", function () {
         // Get signers
         [owner, addr1, addr2] = await ethers.getSigners();
 
-        // Deploy IAI token
+        // Deploy IAI token with initial supply
+        const initialSupply = ethers.parseEther("1000000"); // 1 million tokens
         const IAI = await ethers.getContractFactory("IAIToken");
-        const iAI_ = await IAI.deploy(owner.address);
+        const iAI_ = await IAI.deploy(owner.address, initialSupply);
         await iAI_.waitForDeployment();
         iAIAddress = await iAI_.getAddress();
 
@@ -64,49 +65,21 @@ describe("Contract Deployment and Integration", function () {
         });
     });
 
-    describe("Token Minting and Permissions", function () {
-        it("Should allow owner to mint iAI tokens", async function () {
-            const mintAmount = ethers.parseEther("1000");
-            await iAI.mint(owner.address, mintAmount);
-            expect(await iAI.balanceOf(owner.address)).to.equal(mintAmount);
+    describe("Token Initial Supply and Permissions", function () {
+        it("Should set the initial supply correctly", async function () {
+            const initialSupply = ethers.parseEther("1000000");
+            expect(await iAI.balanceOf(owner.address)).to.equal(initialSupply);
         });
 
-        it("Should revert when minting zero amount", async function () {
-            await expect(iAI.mint(owner.address, 0)).to.be.reverted;
-        });
-
-        it("Should revert when non-owner tries to mint", async function () {
-            const mintAmount = ethers.parseEther("1000");
-            await expect(iAI.connect(addr1).mint(addr1.address, mintAmount)).to
-                .be.reverted;
-        });
-
-        it("Should handle multiple mints to the same address correctly", async function () {
-            const mintAmount1 = ethers.parseEther("1000");
-            const mintAmount2 = ethers.parseEther("2000");
-
-            await iAI.mint(addr1.address, mintAmount1);
-            await iAI.mint(addr1.address, mintAmount2);
-
-            expect(await iAI.balanceOf(addr1.address)).to.equal(
-                mintAmount1 + mintAmount2
-            );
-        });
-
-        it("Should handle minting maximum allowed amount", async function () {
-            const maxUint256 = ethers.MaxUint256;
-            await iAI.mint(owner.address, maxUint256);
-            expect(await iAI.balanceOf(owner.address)).to.equal(maxUint256);
-
-            // Should revert when trying to mint more after reaching max
-            await expect(iAI.mint(owner.address, 1)).to.be.reverted;
+        it("Should set the total supply correctly", async function () {
+            const initialSupply = ethers.parseEther("1000000");
+            expect(await iAI.totalSupply()).to.equal(initialSupply);
         });
     });
 
     describe("RewardDistributor Functionality", function () {
         it("Should allow adding funds to RewardDistributor", async function () {
             const fundAmount = ethers.parseEther("100");
-            await iAI.mint(owner.address, fundAmount);
             await iAI.approve(rewardDistributorAddress, fundAmount);
             await rewardDistributor.addFunds(fundAmount);
             expect(await iAI.balanceOf(rewardDistributorAddress)).to.equal(
@@ -118,8 +91,7 @@ describe("Contract Deployment and Integration", function () {
             const fundAmount = ethers.parseEther("100");
             const rewardAmount = ethers.parseEther("10");
 
-            // Mint and fund
-            await iAI.mint(owner.address, fundAmount);
+            // Fund directly from owner's initial supply
             await iAI.approve(rewardDistributorAddress, fundAmount);
             await rewardDistributor.addFunds(fundAmount);
 
@@ -138,8 +110,7 @@ describe("Contract Deployment and Integration", function () {
             const fundAmount = ethers.parseEther("100");
             const rewardAmount = ethers.parseEther("10");
 
-            // Mint and fund
-            await iAI.mint(owner.address, fundAmount);
+            // Fund directly from owner's initial supply
             await iAI.approve(rewardDistributorAddress, fundAmount);
             await rewardDistributor.addFunds(fundAmount);
 

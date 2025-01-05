@@ -9,16 +9,13 @@ import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 
 contract IAIToken is ERC20, ERC20Burnable, Ownable, ERC20Permit {
     constructor(
-        address initialOwner
-    )
-        ERC20("iAI Token", "IAI")
-        Ownable(initialOwner)
-        ERC20Permit("iAI Token")
-    {}
-
-    function mint(address to, uint256 amount) public onlyOwner {
-        require(to != address(0), "IAIToken: mint to the zero address");
-        require(amount > 0, "IAIToken: mint amount should be greater than 0");
-        _mint(to, amount);
+        address initialOwner,
+        uint256 initialSupply
+    ) ERC20("iAI Token", "IAI") Ownable(initialOwner) ERC20Permit("iAI Token") {
+        require(
+            initialSupply > 0,
+            "IAIToken: initial supply should be greater than 0"
+        );
+        _mint(initialOwner, initialSupply);
     }
 }

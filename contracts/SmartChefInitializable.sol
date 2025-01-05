@@ -139,7 +139,7 @@ contract SmartChefInitializable is Ownable, ReentrancyGuard {
         }
 
         if (_amount > 0) {
-            user.amount = user.amount - _amount;
+            user.amount = user.amount + _amount;
             stakedToken.transferFrom(msg.sender, address(this), _amount);
         }
 
@@ -230,6 +230,7 @@ contract SmartChefInitializable is Ownable, ReentrancyGuard {
      */
     function stopReward() external onlyOwner {
         bonusEndBlock = block.number;
+        emit RewardsStop(block.number);
     }
 
     /*
@@ -263,6 +264,7 @@ contract SmartChefInitializable is Ownable, ReentrancyGuard {
      */
     function updateRewardPerBlock(uint256 _rewardPerBlock) external onlyOwner {
         require(block.number < startBlock, "Pool has started");
+        _updatePool();
         rewardPerBlock = _rewardPerBlock;
         emit NewRewardPerBlock(_rewardPerBlock);
     }

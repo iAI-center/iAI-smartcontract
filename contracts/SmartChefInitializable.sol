@@ -88,6 +88,14 @@ contract SmartChefInitializable is Ownable, ReentrancyGuard {
         require(!isInitialized, "Already initialized");
         require(msg.sender == SMART_CHEF_FACTORY, "Not factory");
 
+        // Calculate and validate total rewards
+        uint256 totalBlocks = _bonusEndBlock - _startBlock;
+        uint256 totalRewardsNeeded = totalBlocks * _rewardPerBlock;
+        require(
+            ERC20(_rewardToken).balanceOf(address(this)) >= totalRewardsNeeded,
+            "Insufficient reward tokens provided"
+        );
+
         // Make this contract initialized
         isInitialized = true;
 

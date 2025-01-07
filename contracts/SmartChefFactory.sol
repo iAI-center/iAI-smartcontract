@@ -38,6 +38,20 @@ contract SmartChefFactory is Ownable {
         require(ERC20(_rewardToken).totalSupply() >= 0);
         require(_stakedToken != _rewardToken, "Tokens must be be different");
 
+        // Calculate total rewards needed
+        uint256 totalBlocks = _bonusEndBlock - _startBlock;
+        uint256 totalRewardsNeeded = totalBlocks * _rewardPerBlock;
+
+        // Transfer rewards from caller to factory
+        require(
+            IERC20(_rewardToken).transferFrom(
+                msg.sender,
+                address(this),
+                totalRewardsNeeded
+            ),
+            "Failed to transfer rewards"
+        );
+
         bytes memory bytecode = type(SmartChefInitializable).creationCode;
         bytes32 salt = keccak256(
             abi.encodePacked(_stakedToken, _rewardToken, _startBlock)
@@ -52,6 +66,9 @@ contract SmartChefFactory is Ownable {
                 salt
             )
         }
+
+        // Transfer rewards to the new pool before initialization
+        IERC20(_rewardToken).transfer(smartChefAddress, totalRewardsNeeded);
 
         SmartChefInitializable(smartChefAddress).initialize(
             _stakedToken,

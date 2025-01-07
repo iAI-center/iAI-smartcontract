@@ -46,6 +46,13 @@ const setupSmartChef = async (
         poolLimitPerUser: ethers.parseEther("1000"),
     };
 
+    // Calculate total rewards needed
+    const totalBlocks = config.bonusEndBlock - config.startBlock;
+    const totalRewardsNeeded = BigInt(totalBlocks) * config.rewardPerBlock;
+
+    // Approve factory to spend reward tokens
+    await rewardToken.approve(await factory.getAddress(), totalRewardsNeeded);
+
     await factory.deployPool(
         await stakedToken.getAddress(),
         await rewardToken.getAddress(),
@@ -64,9 +71,8 @@ const setupSmartChef = async (
         events[events.length - 1].args.smartChef
     );
 
-    rewardToken
-        .connect(owner)
-        .transfer(await chef.getAddress(), ethers.parseEther("1000000"));
+    // Remove this transfer since rewards are now handled by factory
+    // rewardToken.connect(owner).transfer(await chef.getAddress(), ethers.parseEther("1000000"));
 
     return { factory, chef, config };
 };
@@ -172,6 +178,11 @@ describe("SmartChef System Tests", function () {
         it("should handle early withdrawal before reward period starts", async function () {
             const depositAmount = ethers.parseEther("100");
             await stakedToken.approve(await chef.getAddress(), depositAmount);
+
+            const balanceBefore = await rewardToken.balanceOf(
+                await owner.getAddress()
+            );
+
             await chef.deposit(depositAmount);
 
             // We're still before startBlock
@@ -181,10 +192,12 @@ describe("SmartChef System Tests", function () {
             expect(pendingReward).to.equal(0);
 
             await chef.withdraw(depositAmount);
-            const finalReward = await rewardToken.balanceOf(
+
+            const balanceAfter = await rewardToken.balanceOf(
                 await owner.getAddress()
             );
-            expect(finalReward).to.equal(0);
+            const actualReward = balanceAfter - balanceBefore;
+            expect(actualReward).to.equal(0);
         });
 
         it("should handle compound farming (harvest and re-stake)", async function () {

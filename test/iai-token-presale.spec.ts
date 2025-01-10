@@ -1,11 +1,11 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import { time } from "@nomicfoundation/hardhat-toolbox/network-helpers";
-import { IAITokenPresale, IERC20 } from "../typechain-types";
+import { IAIPresale, IERC20 } from "../typechain-types";
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 
-describe("IAITokenPresale", function () {
-    let presale: IAITokenPresale;
+describe("IAIPresale", function () {
+    let presale: IAIPresale;
     let usdt: IERC20;
     let iaiPresaleToken: IERC20;
     let owner: SignerWithAddress;
@@ -34,9 +34,7 @@ describe("IAITokenPresale", function () {
         const endTime = startTime + 86400; // End in 24 hours
 
         // Deploy presale contract
-        const PresaleFactory = await ethers.getContractFactory(
-            "IAITokenPresale"
-        );
+        const PresaleFactory = await ethers.getContractFactory("IAIPresale");
         presale = await PresaleFactory.deploy(
             await usdt.getAddress(),
             await iaiPresaleToken.getAddress(),

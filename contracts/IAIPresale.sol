@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 
-contract IAITokenPresale is Ownable, ReentrancyGuard, Pausable {
+contract IAIPresale is Ownable, ReentrancyGuard, Pausable {
     IERC20 public usdtToken;
     IERC20 public iaiPresaleToken;
 
@@ -54,7 +54,6 @@ contract IAITokenPresale is Ownable, ReentrancyGuard, Pausable {
             "Invalid token addresses"
         );
         require(_tokenPrice > 0, "Invalid token price");
-        require(_startTime > block.timestamp, "Start time must be in future");
         require(_endTime > _startTime, "End time must be after start time");
         require(_maxSaleAmount > 0, "Invalid max sale amount");
 

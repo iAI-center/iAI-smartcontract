@@ -5,6 +5,7 @@ import "./hardhat-change-network";
 import "./task/flatten2";
 
 import networkPolygonTestnet from "./.networks/polygonTestnet.json";
+import networkBscTestnet from "./.networks/bscTestnet.json";
 
 const SOLC_0_8_27_NO_OPTIMIZER = {
     version: "0.8.27",
@@ -39,6 +40,13 @@ const config: HardhatUserConfig = {
         },
         forkingPolygonTestnet: {
             ...networkPolygonTestnet,
+            url: "http://127.0.0.1:8545",
+        },
+        bscTestnet: {
+            ...networkBscTestnet,
+        },
+        forkingBscTestnet: {
+            ...networkBscTestnet,
             url: "http://127.0.0.1:8545",
         },
     },

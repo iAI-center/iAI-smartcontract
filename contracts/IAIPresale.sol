@@ -77,9 +77,13 @@ contract IAIPresale is Ownable, ReentrancyGuard, Pausable {
     }
 
     function buyTokens(
-        uint256 tokenAmount
+        uint256 usdtAmount
     ) external nonReentrant isSaleActive whenNotPaused {
         require(revenueReceiver != address(0), "Invalid revenue receiver");
+        require(usdtAmount > 0, "Amount must be greater than 0");
+
+        // Calculate token amount based on USDT amount
+        uint256 tokenAmount = (usdtAmount * 1e18) / tokenPrice;
 
         require(
             tokenAmount >= minPurchaseAmount,
@@ -94,15 +98,13 @@ contract IAIPresale is Ownable, ReentrancyGuard, Pausable {
             "Exceeds user maximum"
         );
 
-        require(tokenAmount > 0, "Amount must be greater than 0");
         require(
             totalTokensSold + tokenAmount <= maxSaleAmount,
             "Exceeds max sale amount"
         );
 
-        uint256 cost = (tokenAmount * tokenPrice) / 1e18;
         require(
-            usdtToken.balanceOf(msg.sender) >= cost,
+            usdtToken.balanceOf(msg.sender) >= usdtAmount,
             "Insufficient USDT balance"
         );
         require(
@@ -111,7 +113,7 @@ contract IAIPresale is Ownable, ReentrancyGuard, Pausable {
         );
 
         require(
-            usdtToken.transferFrom(msg.sender, revenueReceiver, cost),
+            usdtToken.transferFrom(msg.sender, revenueReceiver, usdtAmount),
             "USDT transfer failed"
         );
         require(
@@ -121,7 +123,7 @@ contract IAIPresale is Ownable, ReentrancyGuard, Pausable {
 
         totalTokensSold += tokenAmount;
         userTotalPurchased[msg.sender] += tokenAmount;
-        emit TokensPurchased(msg.sender, tokenAmount, cost);
+        emit TokensPurchased(msg.sender, tokenAmount, usdtAmount);
     }
 
     function updatePresaleConfig(

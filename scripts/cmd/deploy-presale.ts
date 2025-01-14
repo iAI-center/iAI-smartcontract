@@ -8,25 +8,26 @@ import { Wallet } from "ethers";
 
 interface Input {
     iaiToken: {
-        address?: string;
         name: string;
         symbol: string;
+        decimal: number;
         initialSupply: string;
+        address?: string;
     };
     usdt: {
-        address?: string;
         name: string;
         symbol: string;
+        decimal: number;
+        address?: string;
     };
     presale: {
         tokenPrice: string; // in ether
         startTime: number; // unix timestamp
         endTime: number; // unix timestamp
         maxSaleAmount: string; // in ether
-        isWhitelistOnly: boolean;
         minPurchase: string; // in ether
         maxPurchase: string; // in ether
-        whitelist: string[]; // addresses
+        revenueReceiver: string; // address to receive revenue
     };
     newOwner: string; // address of new owner to tranfer ownsership to
     generateNewWalletForTestUSDTHolder: boolean;
@@ -59,11 +60,32 @@ const program = new Command("deploy-presale")
     await hre.run("compile");
     console.log("compiling done");
 
+    let justDeployedIAIPresaleToken = false;
+
     // Deploy IAIPresaleToken
     let iaiPresaleTokenDeploymenTx = "";
     let iaiPresaleTokenAddress = "";
     if (input.iaiToken.address) {
         iaiPresaleTokenAddress = input.iaiToken.address;
+        const erc20 = await ethers.getContractAt(
+            "ERC20",
+            input.iaiToken.address
+        );
+        if ((await erc20.name()) !== input.iaiToken.name) {
+            console.log(
+                `given token (${input.iaiToken.address}) name does not match: ${input.iaiToken.name}`
+            );
+        }
+        if ((await erc20.symbol()) !== input.iaiToken.symbol) {
+            console.log(
+                `given token (${input.iaiToken.address}) symbol does not match: ${input.iaiToken.symbol}`
+            );
+        }
+        if ((await erc20.decimals()) !== BigInt(input.iaiToken.decimal)) {
+            console.log(
+                `given token (${input.iaiToken.address}) decimal does not match: ${input.iaiToken.decimal}`
+            );
+        }
     } else {
         const IAIPresaleToken = await ethers.getContractFactory(
             "IAIPresaleToken"
@@ -71,13 +93,18 @@ const program = new Command("deploy-presale")
         const iaiToken = await IAIPresaleToken.deploy(
             input.iaiToken.name,
             input.iaiToken.symbol,
-            ethers.parseEther(input.iaiToken.initialSupply!)
+            ethers.parseUnits(
+                input.iaiToken.initialSupply,
+                input.iaiToken.decimal
+            ),
+            input.iaiToken.decimal
         );
         await iaiToken.waitForDeployment();
-        const iaiTokenAddress = await iaiToken.getAddress();
-        console.log(`IAIPresaleToken deployed to: ${iaiTokenAddress}`);
-        iaiPresaleTokenAddress = iaiTokenAddress;
+        const tokenAddress = await iaiToken.getAddress();
+        console.log(`IAIPresaleToken deployed to: ${tokenAddress}`);
+        iaiPresaleTokenAddress = tokenAddress;
         iaiPresaleTokenDeploymenTx = iaiToken.deploymentTransaction()?.hash!;
+        justDeployedIAIPresaleToken = true;
     }
 
     // Deploy USDT
@@ -86,11 +113,29 @@ const program = new Command("deploy-presale")
     let testUsdtHolderPk = "";
     if (input.usdt.address) {
         usdtTokenAddress = input.usdt.address;
+        const erc20 = await ethers.getContractAt("ERC20", input.usdt.address);
+        if ((await erc20.name()) !== input.usdt.name) {
+            console.log(
+                `given token (${input.usdt.address}) name does not match: ${input.usdt.name}`
+            );
+        }
+        if ((await erc20.symbol()) !== input.usdt.symbol) {
+            console.log(
+                `given token (${input.usdt.address}) symbol does not match: ${input.usdt.symbol}`
+            );
+        }
+        if ((await erc20.decimals()) !== BigInt(input.usdt.decimal)) {
+            console.log(
+                `given token (${input.usdt.address}) decimal does not match: ${input.usdt.decimal}`
+            );
+        }
     } else {
         const MockERC20 = await ethers.getContractFactory("MockERC20");
         const mockUSDT = await MockERC20.deploy(
             input.usdt.name,
-            input.usdt.symbol
+            input.usdt.symbol,
+            input.usdt.decimal,
+            ethers.parseUnits("1000000000", input.usdt.decimal)
         );
         await mockUSDT.waitForDeployment();
         const mockUSDTAddress = await mockUSDT.getAddress();
@@ -100,7 +145,7 @@ const program = new Command("deploy-presale")
 
         if (input.generateNewWalletForTestUSDTHolder) {
             const holder = Wallet.createRandom();
-            const transferAmount = ethers.parseEther("500000");
+            const transferAmount = ethers.parseEther("5000000");
             console.log(`transfering usdt to holder: ${holder.address}`);
             await mockUSDT
                 .connect(deployer)
@@ -121,11 +166,11 @@ const program = new Command("deploy-presale")
     const presale = await Presale.deploy(
         usdtTokenAddress,
         iaiPresaleTokenAddress,
-        ethers.parseEther(input.presale.tokenPrice),
+        input.presale.revenueReceiver,
+        ethers.parseUnits(input.presale.tokenPrice, input.usdt.decimal),
         input.presale.startTime,
         input.presale.endTime,
         ethers.parseEther(input.presale.maxSaleAmount),
-        input.presale.isWhitelistOnly,
         ethers.parseEther(input.presale.minPurchase),
         ethers.parseEther(input.presale.maxPurchase)
     );
@@ -143,6 +188,36 @@ const program = new Command("deploy-presale")
         console.log(`ownership transferred to: ${input.newOwner}`);
         console.log(`checking new ownership: ${await presale.owner()} ...done`);
         transferOwnershipTx = receipt!.hash;
+    }
+
+    // transfer iai presale token to presale contract, if it's first deployed in this script
+    if (justDeployedIAIPresaleToken) {
+        console.log(
+            `transfering iai presale token to presale contract: ${presaleAddress}`
+        );
+        const confirmed = await cliHelper.confirmPromptMessage(
+            "confirm to transfer?"
+        );
+        if (confirmed) {
+            const iaiToken = await ethers.getContractAt(
+                "ERC20",
+                iaiPresaleTokenAddress
+            );
+            const tx = await iaiToken
+                .connect(deployer)
+                .transfer(
+                    presaleAddress,
+                    await iaiToken.balanceOf(deployer.address)
+                );
+            await tx.wait();
+            console.log(
+                `transfered iai presale token to presale contract: ${presaleAddress}`
+            );
+        } else {
+            console.log(
+                "skipped transfering iai presale token to presale contract"
+            );
+        }
     }
 
     // Create output directory

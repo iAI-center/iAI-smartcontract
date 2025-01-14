@@ -145,14 +145,18 @@ const program = new Command("deploy-presale")
 
         if (input.generateNewWalletForTestUSDTHolder) {
             const holder = Wallet.createRandom();
-            const transferAmount = ethers.parseEther("5000000");
+            const transferAmount = ethers.parseUnits(
+                "5000000",
+                input.usdt.decimal
+            );
             console.log(`transfering usdt to holder: ${holder.address}`);
             await mockUSDT
                 .connect(deployer)
                 .transfer(holder.address, transferAmount);
             console.log(
-                `${ethers.formatEther(
-                    transferAmount
+                `${ethers.formatUnits(
+                    transferAmount,
+                    input.usdt.decimal
                 )} usdt transferred to holder: ${holder.address} ...done`
             );
             testUsdtHolderPk = holder.privateKey;

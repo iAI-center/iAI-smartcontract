@@ -18,10 +18,10 @@ POLYGON_IAI_TOKEN_INPUT := $(POLYGON_INPUT_DIR)/iai-token.json
 POLYGON_CALLHELPER_INPUT := $(POLYGON_INPUT_DIR)/callhelper.json
 POLYGON_REWARD_DIST_INPUT := $(POLYGON_INPUT_DIR)/reward-distributor.json
 POLYGON_ADD_FUNDS_INPUT := $(POLYGON_INPUT_DIR)/add-funds.json
-POLYGON_DEPLOY_PRESALE_INPUT_TESTNET := $(POLYGON_INPUT_DIR)/deploy-presale.json
+POLYGON_DEPLOY_PRESALE_INPUT_TESTNET := $(POLYGON_INPUT_DIR)/deploy-presale-private.json
 
 # Input file paths for Bsc network family
-BSC_DEPLOY_PRESALE_INPUT_TESTNET := $(BSC_INPUT_DIR)/deploy-presale.json
+BSC_DEPLOY_PRESALE_INPUT_TESTNET := $(BSC_INPUT_DIR)/deploy-presale-private.json
 
 # Task templates
 define run-script
@@ -56,7 +56,7 @@ add-funds-polygon-testnet:
 deploy-all-polygon-testnet:
 	$(call run-deploy-all,deploy-all,$(POLYGON_TESTNET))
 
-deploy-iai-presale-polygon-testnet:
+deploy-iai-presale-private-polygon-testnet:
 	$(call run-contract-deployment,deploy-presale,$(POLYGON_DEPLOY_PRESALE_INPUT_TESTNET),$(POLYGON_TESTNET))
 
 ####################################################################################################
@@ -79,7 +79,7 @@ add-funds-forking-polygon-testnet:
 deploy-all-forking-polygon-testnet:
 	$(call run-deploy-all,deploy-all,$(FORKING_POLYGON_TESTNET))
 
-deploy-iai-presale-forking-polygon-testnet:
+deploy-iai-presale-private-forking-polygon-testnet:
 	$(call run-contract-deployment,deploy-presale,$(POLYGON_DEPLOY_PRESALE_INPUT_TESTNET),$(FORKING_POLYGON_TESTNET))
 
 
@@ -87,7 +87,7 @@ deploy-iai-presale-forking-polygon-testnet:
 ### BSC Testnet
 ####################################################################################################
 
-deploy-iai-presale-bsc-testnet:
+deploy-iai-presale-private-bsc-testnet:
 	$(call run-contract-deployment,deploy-presale,$(BSC_DEPLOY_PRESALE_INPUT_TESTNET),$(BSC_TESTNET))
 
 
@@ -95,5 +95,5 @@ deploy-iai-presale-bsc-testnet:
 ### Forking BSC Testnet
 ####################################################################################################
 
-deploy-iai-presale-forking-bsc-testnet:
+deploy-iai-presale-private-forking-bsc-testnet:
 	$(call run-contract-deployment,deploy-presale,$(BSC_DEPLOY_PRESALE_INPUT_TESTNET),$(FORKING_BSC_TESTNET))

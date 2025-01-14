@@ -534,16 +534,16 @@ describe("IAIPresale", function () {
         it("Should calculate correct costs for various purchase amounts with 0.6 USDT price", async function () {
             const testCases = [
                 {
-                    tokens: ethers.parseEther("100"), // 100 IAI tokens
-                    expectedCost: BigInt("60000000"), // 60 USDT (6 decimals)
+                    usdtAmount: BigInt("60000000"), // 60 USDT (6 decimals)
+                    expectedTokens: ethers.parseEther("100"), // 100 IAI tokens
                 },
                 {
-                    tokens: ethers.parseEther("1000"), // 1000 IAI tokens
-                    expectedCost: BigInt("600000000"), // 600 USDT (6 decimals)
+                    usdtAmount: BigInt("600000000"), // 600 USDT (6 decimals)
+                    expectedTokens: ethers.parseEther("1000"), // 1000 IAI tokens
                 },
                 {
-                    tokens: ethers.parseEther("5000"), // 5000 IAI tokens
-                    expectedCost: BigInt("3000000000"), // 3000 USDT (6 decimals)
+                    usdtAmount: BigInt("3000000000"), // 3000 USDT (6 decimals)
+                    expectedTokens: ethers.parseEther("5000"), // 5000 IAI tokens
                 },
             ];
 
@@ -553,27 +553,27 @@ describe("IAIPresale", function () {
                     .connect(buyer1)
                     .approve(
                         await presaleWith6DecimalUSDT.getAddress(),
-                        testCase.expectedCost
+                        testCase.usdtAmount
                     );
 
                 // Verify the purchase
                 await expect(
                     presaleWith6DecimalUSDT
                         .connect(buyer1)
-                        .buyTokens(testCase.tokens)
+                        .buyTokens(testCase.usdtAmount)
                 )
                     .to.emit(presaleWith6DecimalUSDT, "TokensPurchased")
                     .withArgs(
                         buyer1.address,
-                        testCase.tokens,
-                        testCase.expectedCost
+                        testCase.expectedTokens,
+                        testCase.usdtAmount
                     );
 
                 // Verify balances
                 const receiverBalance = await usdt6Decimals.balanceOf(
                     revenueReceiver.address
                 );
-                expect(receiverBalance).to.equal(testCase.expectedCost);
+                expect(receiverBalance).to.equal(testCase.usdtAmount);
 
                 // Reset revenue receiver balance for next test
                 await usdt6Decimals
@@ -583,8 +583,8 @@ describe("IAIPresale", function () {
         });
 
         it("Should handle fractional token amounts with 6 decimal USDT", async function () {
-            const tokens = ethers.parseEther("150.5"); // 150.5 IAI tokens
-            const expectedCost = BigInt("90300000"); // 90.3 USDT (6 decimals)
+            const usdtAmount = BigInt("90300000"); // 90.3 USDT (6 decimals)
+            const expectedTokens = ethers.parseEther("150.5"); // 150.5 IAI tokens
 
             // Get initial balances
             const initialUSDTBalance = await usdt6Decimals.balanceOf(
@@ -601,14 +601,14 @@ describe("IAIPresale", function () {
                 .connect(buyer1)
                 .approve(
                     await presaleWith6DecimalUSDT.getAddress(),
-                    expectedCost
+                    usdtAmount
                 );
 
             await expect(
-                presaleWith6DecimalUSDT.connect(buyer1).buyTokens(tokens)
+                presaleWith6DecimalUSDT.connect(buyer1).buyTokens(usdtAmount)
             )
                 .to.emit(presaleWith6DecimalUSDT, "TokensPurchased")
-                .withArgs(buyer1.address, tokens, expectedCost);
+                .withArgs(buyer1.address, expectedTokens, usdtAmount);
 
             // Verify final balances
             const finalUSDTBalance = await usdt6Decimals.balanceOf(
@@ -622,16 +622,16 @@ describe("IAIPresale", function () {
             );
 
             // Verify USDT deduction
-            expect(initialUSDTBalance - finalUSDTBalance).to.equal(
-                expectedCost
-            );
+            expect(initialUSDTBalance - finalUSDTBalance).to.equal(usdtAmount);
 
             // Verify IAI token received
-            expect(finalTokenBalance - initialTokenBalance).to.equal(tokens);
+            expect(finalTokenBalance - initialTokenBalance).to.equal(
+                expectedTokens
+            );
 
             // Verify revenue receiver got correct USDT amount
             expect(finalReceiverBalance - initialReceiverBalance).to.equal(
-                expectedCost
+                usdtAmount
             );
         });
     });
@@ -691,16 +691,16 @@ describe("IAIPresale", function () {
         it("Should calculate correct costs for various purchase amounts with 0.6 USDT price", async function () {
             const testCases = [
                 {
-                    tokens: ethers.parseEther("100"), // 100 IAI tokens
-                    expectedCost: ethers.parseEther("60"), // 60 USDT (18 decimals)
+                    usdtAmount: ethers.parseEther("60"), // 60 USDT (18 decimals)
+                    expectedTokens: ethers.parseEther("100"), // 100 IAI tokens
                 },
                 {
-                    tokens: ethers.parseEther("1000"), // 1000 IAI tokens
-                    expectedCost: ethers.parseEther("600"), // 600 USDT (18 decimals)
+                    usdtAmount: ethers.parseEther("600"), // 600 USDT (18 decimals)
+                    expectedTokens: ethers.parseEther("1000"), // 1000 IAI tokens
                 },
                 {
-                    tokens: ethers.parseEther("5000"), // 5000 IAI tokens
-                    expectedCost: ethers.parseEther("3000"), // 3000 USDT (18 decimals)
+                    usdtAmount: ethers.parseEther("3000"), // 3000 USDT (18 decimals)
+                    expectedTokens: ethers.parseEther("5000"), // 5000 IAI tokens
                 },
             ];
 
@@ -710,27 +710,27 @@ describe("IAIPresale", function () {
                     .connect(buyer1)
                     .approve(
                         await presaleWith18DecimalUSDT.getAddress(),
-                        testCase.expectedCost
+                        testCase.usdtAmount
                     );
 
                 // Verify the purchase
                 await expect(
                     presaleWith18DecimalUSDT
                         .connect(buyer1)
-                        .buyTokens(testCase.tokens)
+                        .buyTokens(testCase.usdtAmount)
                 )
                     .to.emit(presaleWith18DecimalUSDT, "TokensPurchased")
                     .withArgs(
                         buyer1.address,
-                        testCase.tokens,
-                        testCase.expectedCost
+                        testCase.expectedTokens,
+                        testCase.usdtAmount
                     );
 
                 // Verify balances
                 const receiverBalance = await usdt18Decimals.balanceOf(
                     revenueReceiver.address
                 );
-                expect(receiverBalance).to.equal(testCase.expectedCost);
+                expect(receiverBalance).to.equal(testCase.usdtAmount);
 
                 // Reset revenue receiver balance for next test
                 await usdt18Decimals
@@ -740,8 +740,8 @@ describe("IAIPresale", function () {
         });
 
         it("Should handle fractional token amounts with 18 decimal USDT", async function () {
-            const tokens = ethers.parseEther("150.5"); // 150.5 IAI tokens
-            const expectedCost = ethers.parseEther("90.3"); // 90.3 USDT (18 decimals)
+            const usdtAmount = ethers.parseEther("90.3"); // 90.3 USDT (18 decimals)
+            const expectedTokens = ethers.parseEther("150.5"); // 150.5 IAI tokens
 
             // Get initial balances
             const initialUSDTBalance = await usdt18Decimals.balanceOf(
@@ -758,14 +758,14 @@ describe("IAIPresale", function () {
                 .connect(buyer1)
                 .approve(
                     await presaleWith18DecimalUSDT.getAddress(),
-                    expectedCost
+                    usdtAmount
                 );
 
             await expect(
-                presaleWith18DecimalUSDT.connect(buyer1).buyTokens(tokens)
+                presaleWith18DecimalUSDT.connect(buyer1).buyTokens(usdtAmount)
             )
                 .to.emit(presaleWith18DecimalUSDT, "TokensPurchased")
-                .withArgs(buyer1.address, tokens, expectedCost);
+                .withArgs(buyer1.address, expectedTokens, usdtAmount);
 
             // Verify final balances
             const finalUSDTBalance = await usdt18Decimals.balanceOf(
@@ -779,16 +779,16 @@ describe("IAIPresale", function () {
             );
 
             // Verify USDT deduction
-            expect(initialUSDTBalance - finalUSDTBalance).to.equal(
-                expectedCost
-            );
+            expect(initialUSDTBalance - finalUSDTBalance).to.equal(usdtAmount);
 
             // Verify IAI token received
-            expect(finalTokenBalance - initialTokenBalance).to.equal(tokens);
+            expect(finalTokenBalance - initialTokenBalance).to.equal(
+                expectedTokens
+            );
 
             // Verify revenue receiver got correct USDT amount
             expect(finalReceiverBalance - initialReceiverBalance).to.equal(
-                expectedCost
+                usdtAmount
             );
         });
     });

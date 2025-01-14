@@ -485,4 +485,318 @@ describe("IAIPresale", function () {
             expect(finalBalance).to.be.gt(initialBalance);
         });
     });
+
+    describe("USDT (6 Decimals) Price Scenarios", function () {
+        let usdt6Decimals: IERC20;
+        let presaleWith6DecimalUSDT: IAIPresale;
+        const PRICE_6DEC = BigInt("600000"); // 0.6 USDT (6 decimals)
+
+        beforeEach(async function () {
+            // Deploy USDT with 6 decimals
+            const TokenFactory = await ethers.getContractFactory("MockERC20");
+            usdt6Decimals = (await (
+                await TokenFactory.deploy(
+                    "USDT",
+                    "USDT",
+                    6,
+                    BigInt("2000000000000") // 1M USDT with 6 decimals
+                )
+            ).waitForDeployment()) as IERC20;
+
+            // Set up presale timing
+            const startTime = (await time.latest()) + 3600;
+            const endTime = startTime + 86400;
+
+            // Deploy presale contract with 6 decimal USDT
+            const PresaleFactory = await ethers.getContractFactory(
+                "IAIPresale"
+            );
+            presaleWith6DecimalUSDT = await PresaleFactory.deploy(
+                await usdt6Decimals.getAddress(),
+                await iaiPresaleToken.getAddress(),
+                revenueReceiver.address,
+                PRICE_6DEC,
+                startTime,
+                endTime,
+                MAX_SALE_AMOUNT,
+                MIN_PURCHASE,
+                MAX_PURCHASE
+            );
+
+            // Fund the presale contract with IAI tokens
+            await iaiPresaleToken.transfer(
+                await presaleWith6DecimalUSDT.getAddress(),
+                MAX_SALE_AMOUNT
+            );
+
+            // Fund buyers with USDT (6 decimals)
+            const usdtAmount = BigInt("1000000000000"); // 1M USDT
+            await usdt6Decimals.transfer(buyer1.address, usdtAmount);
+            await usdt6Decimals.transfer(buyer2.address, usdtAmount);
+
+            // Move to presale start time
+            await time.increase(3600);
+        });
+
+        it("Should calculate correct costs for various purchase amounts with 0.6 USDT price", async function () {
+            const testCases = [
+                {
+                    tokens: ethers.parseEther("100"), // 100 IAI tokens
+                    expectedCost: BigInt("60000000"), // 60 USDT (6 decimals)
+                },
+                {
+                    tokens: ethers.parseEther("1000"), // 1000 IAI tokens
+                    expectedCost: BigInt("600000000"), // 600 USDT (6 decimals)
+                },
+                {
+                    tokens: ethers.parseEther("5000"), // 5000 IAI tokens
+                    expectedCost: BigInt("3000000000"), // 3000 USDT (6 decimals)
+                },
+            ];
+
+            for (const testCase of testCases) {
+                // Approve USDT spending
+                await usdt6Decimals
+                    .connect(buyer1)
+                    .approve(
+                        await presaleWith6DecimalUSDT.getAddress(),
+                        testCase.expectedCost
+                    );
+
+                // Verify the purchase
+                await expect(
+                    presaleWith6DecimalUSDT
+                        .connect(buyer1)
+                        .buyTokens(testCase.tokens)
+                )
+                    .to.emit(presaleWith6DecimalUSDT, "TokensPurchased")
+                    .withArgs(
+                        buyer1.address,
+                        testCase.tokens,
+                        testCase.expectedCost
+                    );
+
+                // Verify balances
+                const receiverBalance = await usdt6Decimals.balanceOf(
+                    revenueReceiver.address
+                );
+                expect(receiverBalance).to.equal(testCase.expectedCost);
+
+                // Reset revenue receiver balance for next test
+                await usdt6Decimals
+                    .connect(revenueReceiver)
+                    .transfer(owner.address, receiverBalance);
+            }
+        });
+
+        it("Should handle fractional token amounts with 6 decimal USDT", async function () {
+            const tokens = ethers.parseEther("150.5"); // 150.5 IAI tokens
+            const expectedCost = BigInt("90300000"); // 90.3 USDT (6 decimals)
+
+            // Get initial balances
+            const initialUSDTBalance = await usdt6Decimals.balanceOf(
+                buyer1.address
+            );
+            const initialTokenBalance = await iaiPresaleToken.balanceOf(
+                buyer1.address
+            );
+            const initialReceiverBalance = await usdt6Decimals.balanceOf(
+                revenueReceiver.address
+            );
+
+            await usdt6Decimals
+                .connect(buyer1)
+                .approve(
+                    await presaleWith6DecimalUSDT.getAddress(),
+                    expectedCost
+                );
+
+            await expect(
+                presaleWith6DecimalUSDT.connect(buyer1).buyTokens(tokens)
+            )
+                .to.emit(presaleWith6DecimalUSDT, "TokensPurchased")
+                .withArgs(buyer1.address, tokens, expectedCost);
+
+            // Verify final balances
+            const finalUSDTBalance = await usdt6Decimals.balanceOf(
+                buyer1.address
+            );
+            const finalTokenBalance = await iaiPresaleToken.balanceOf(
+                buyer1.address
+            );
+            const finalReceiverBalance = await usdt6Decimals.balanceOf(
+                revenueReceiver.address
+            );
+
+            // Verify USDT deduction
+            expect(initialUSDTBalance - finalUSDTBalance).to.equal(
+                expectedCost
+            );
+
+            // Verify IAI token received
+            expect(finalTokenBalance - initialTokenBalance).to.equal(tokens);
+
+            // Verify revenue receiver got correct USDT amount
+            expect(finalReceiverBalance - initialReceiverBalance).to.equal(
+                expectedCost
+            );
+        });
+    });
+
+    describe("USDT (18 Decimals) Price Scenarios", function () {
+        let usdt18Decimals: IERC20;
+        let presaleWith18DecimalUSDT: IAIPresale;
+        const PRICE_18DEC = ethers.parseEther("0.6"); // 0.6 USDT (18 decimals)
+
+        beforeEach(async function () {
+            // Deploy USDT with 18 decimals
+            const TokenFactory = await ethers.getContractFactory("MockERC20");
+            usdt18Decimals = (await (
+                await TokenFactory.deploy(
+                    "USDT",
+                    "USDT",
+                    18,
+                    ethers.parseEther("2000000") // 2M USDT with 18 decimals
+                )
+            ).waitForDeployment()) as IERC20;
+
+            // Set up presale timing
+            const startTime = (await time.latest()) + 3600;
+            const endTime = startTime + 86400;
+
+            // Deploy presale contract with 18 decimal USDT
+            const PresaleFactory = await ethers.getContractFactory(
+                "IAIPresale"
+            );
+            presaleWith18DecimalUSDT = await PresaleFactory.deploy(
+                await usdt18Decimals.getAddress(),
+                await iaiPresaleToken.getAddress(),
+                revenueReceiver.address,
+                PRICE_18DEC,
+                startTime,
+                endTime,
+                MAX_SALE_AMOUNT,
+                MIN_PURCHASE,
+                MAX_PURCHASE
+            );
+
+            // Fund the presale contract with IAI tokens
+            await iaiPresaleToken.transfer(
+                await presaleWith18DecimalUSDT.getAddress(),
+                MAX_SALE_AMOUNT
+            );
+
+            // Fund buyers with USDT (18 decimals)
+            const usdtAmount = ethers.parseEther("1000000"); // 1M USDT
+            await usdt18Decimals.transfer(buyer1.address, usdtAmount);
+            await usdt18Decimals.transfer(buyer2.address, usdtAmount);
+
+            // Move to presale start time
+            await time.increase(3600);
+        });
+
+        it("Should calculate correct costs for various purchase amounts with 0.6 USDT price", async function () {
+            const testCases = [
+                {
+                    tokens: ethers.parseEther("100"), // 100 IAI tokens
+                    expectedCost: ethers.parseEther("60"), // 60 USDT (18 decimals)
+                },
+                {
+                    tokens: ethers.parseEther("1000"), // 1000 IAI tokens
+                    expectedCost: ethers.parseEther("600"), // 600 USDT (18 decimals)
+                },
+                {
+                    tokens: ethers.parseEther("5000"), // 5000 IAI tokens
+                    expectedCost: ethers.parseEther("3000"), // 3000 USDT (18 decimals)
+                },
+            ];
+
+            for (const testCase of testCases) {
+                // Approve USDT spending
+                await usdt18Decimals
+                    .connect(buyer1)
+                    .approve(
+                        await presaleWith18DecimalUSDT.getAddress(),
+                        testCase.expectedCost
+                    );
+
+                // Verify the purchase
+                await expect(
+                    presaleWith18DecimalUSDT
+                        .connect(buyer1)
+                        .buyTokens(testCase.tokens)
+                )
+                    .to.emit(presaleWith18DecimalUSDT, "TokensPurchased")
+                    .withArgs(
+                        buyer1.address,
+                        testCase.tokens,
+                        testCase.expectedCost
+                    );
+
+                // Verify balances
+                const receiverBalance = await usdt18Decimals.balanceOf(
+                    revenueReceiver.address
+                );
+                expect(receiverBalance).to.equal(testCase.expectedCost);
+
+                // Reset revenue receiver balance for next test
+                await usdt18Decimals
+                    .connect(revenueReceiver)
+                    .transfer(owner.address, receiverBalance);
+            }
+        });
+
+        it("Should handle fractional token amounts with 18 decimal USDT", async function () {
+            const tokens = ethers.parseEther("150.5"); // 150.5 IAI tokens
+            const expectedCost = ethers.parseEther("90.3"); // 90.3 USDT (18 decimals)
+
+            // Get initial balances
+            const initialUSDTBalance = await usdt18Decimals.balanceOf(
+                buyer1.address
+            );
+            const initialTokenBalance = await iaiPresaleToken.balanceOf(
+                buyer1.address
+            );
+            const initialReceiverBalance = await usdt18Decimals.balanceOf(
+                revenueReceiver.address
+            );
+
+            await usdt18Decimals
+                .connect(buyer1)
+                .approve(
+                    await presaleWith18DecimalUSDT.getAddress(),
+                    expectedCost
+                );
+
+            await expect(
+                presaleWith18DecimalUSDT.connect(buyer1).buyTokens(tokens)
+            )
+                .to.emit(presaleWith18DecimalUSDT, "TokensPurchased")
+                .withArgs(buyer1.address, tokens, expectedCost);
+
+            // Verify final balances
+            const finalUSDTBalance = await usdt18Decimals.balanceOf(
+                buyer1.address
+            );
+            const finalTokenBalance = await iaiPresaleToken.balanceOf(
+                buyer1.address
+            );
+            const finalReceiverBalance = await usdt18Decimals.balanceOf(
+                revenueReceiver.address
+            );
+
+            // Verify USDT deduction
+            expect(initialUSDTBalance - finalUSDTBalance).to.equal(
+                expectedCost
+            );
+
+            // Verify IAI token received
+            expect(finalTokenBalance - initialTokenBalance).to.equal(tokens);
+
+            // Verify revenue receiver got correct USDT amount
+            expect(finalReceiverBalance - initialReceiverBalance).to.equal(
+                expectedCost
+            );
+        });
+    });
 });

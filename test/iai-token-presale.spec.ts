@@ -98,32 +98,27 @@ describe("IAIPresale", function () {
         });
 
         it("Should process purchase and send USDT to revenue receiver", async function () {
-            const purchaseAmount = ethers.parseEther("1000");
-            const initialReceiverBalance = await usdt.balanceOf(
-                revenueReceiver.address
-            );
+            const usdtAmount = ethers.parseEther("1000"); // 1000 USDT
+            const expectedTokens = usdtAmount; // 1:1 ratio at TOKEN_PRICE = 1
 
-            await expect(presale.connect(buyer1).buyTokens(purchaseAmount))
+            await expect(presale.connect(buyer1).buyTokens(usdtAmount))
                 .to.emit(presale, "TokensPurchased")
-                .withArgs(buyer1.address, purchaseAmount, purchaseAmount);
+                .withArgs(buyer1.address, expectedTokens, usdtAmount);
 
-            const finalReceiverBalance = await usdt.balanceOf(
-                revenueReceiver.address
-            );
-            expect(finalReceiverBalance - initialReceiverBalance).to.equal(
-                purchaseAmount
+            expect(await usdt.balanceOf(revenueReceiver.address)).to.equal(
+                usdtAmount
             );
         });
 
         it("Should reject purchases below minimum amount", async function () {
-            const smallAmount = ethers.parseEther("50");
+            const smallAmount = ethers.parseEther("50"); // 50 USDT
             await expect(
                 presale.connect(buyer1).buyTokens(smallAmount)
             ).to.be.revertedWith("Below minimum purchase amount");
         });
 
         it("Should reject purchases above maximum amount", async function () {
-            const largeAmount = ethers.parseEther("20000");
+            const largeAmount = ethers.parseEther("20000"); // 20000 USDT
             await expect(
                 presale.connect(buyer1).buyTokens(largeAmount)
             ).to.be.revertedWith("Exceeds maximum purchase amount");
@@ -146,13 +141,15 @@ describe("IAIPresale", function () {
                 .connect(buyer2)
                 .approve(await presale.getAddress(), ethers.parseEther("1000"));
 
-            const purchaseAmount = ethers.parseEther("1000");
-            await expect(presale.connect(buyer2).buyTokens(purchaseAmount))
+            const usdtAmount = ethers.parseEther("1000"); // 1000 USDT
+            const expectedTokens = usdtAmount; // 1:1 ratio at TOKEN_PRICE = 1
+
+            await expect(presale.connect(buyer2).buyTokens(usdtAmount))
                 .to.emit(presale, "TokensPurchased")
-                .withArgs(buyer2.address, purchaseAmount, purchaseAmount);
+                .withArgs(buyer2.address, expectedTokens, usdtAmount);
 
             expect(await presale.userTotalPurchased(buyer2.address)).to.equal(
-                purchaseAmount
+                expectedTokens
             );
         });
     });
@@ -162,19 +159,19 @@ describe("IAIPresale", function () {
             await time.increase(3600);
         });
 
-        it("Should calculate correct cost for default price (1 USDT)", async function () {
-            const purchaseAmount = ethers.parseEther("1000"); // 1000 tokens
-            const expectedCost = purchaseAmount; // 1:1 ratio
+        it("Should calculate correct tokens for default price (1 USDT)", async function () {
+            const usdtAmount = ethers.parseEther("1000"); // 1000 USDT
+            const expectedTokens = usdtAmount; // 1:1 ratio
 
             await usdt
                 .connect(buyer1)
-                .approve(await presale.getAddress(), expectedCost);
-            await expect(presale.connect(buyer1).buyTokens(purchaseAmount))
+                .approve(await presale.getAddress(), usdtAmount);
+            await expect(presale.connect(buyer1).buyTokens(usdtAmount))
                 .to.emit(presale, "TokensPurchased")
-                .withArgs(buyer1.address, purchaseAmount, expectedCost);
+                .withArgs(buyer1.address, expectedTokens, usdtAmount);
         });
 
-        it("Should calculate correct cost for fractional price (0.5 USDT)", async function () {
+        it("Should calculate correct tokens for fractional price (0.5 USDT)", async function () {
             const newPrice = ethers.parseEther("0.5"); // 0.5 USDT per token
             await presale.updatePresaleConfig(
                 newPrice,
@@ -183,15 +180,15 @@ describe("IAIPresale", function () {
                 MAX_SALE_AMOUNT
             );
 
-            const purchaseAmount = ethers.parseEther("1000"); // 1000 tokens
-            const expectedCost = ethers.parseEther("500"); // 500 USDT
+            const usdtAmount = ethers.parseEther("500"); // 500 USDT
+            const expectedTokens = ethers.parseEther("1000"); // 1000 tokens
 
             await usdt
                 .connect(buyer1)
-                .approve(await presale.getAddress(), expectedCost);
-            await expect(presale.connect(buyer1).buyTokens(purchaseAmount))
+                .approve(await presale.getAddress(), usdtAmount);
+            await expect(presale.connect(buyer1).buyTokens(usdtAmount))
                 .to.emit(presale, "TokensPurchased")
-                .withArgs(buyer1.address, purchaseAmount, expectedCost);
+                .withArgs(buyer1.address, expectedTokens, usdtAmount);
         });
 
         it("Should calculate correct cost for premium price (2.5 USDT)", async function () {
@@ -203,19 +200,19 @@ describe("IAIPresale", function () {
                 MAX_SALE_AMOUNT
             );
 
-            const purchaseAmount = ethers.parseEther("1000"); // 1000 tokens
-            const expectedCost = ethers.parseEther("2500"); // 2500 USDT
+            const usdtAmount = ethers.parseEther("2500"); // 2500 USDT
+            const expectedTokens = ethers.parseEther("1000"); // 1000 tokens
 
             await usdt
                 .connect(buyer1)
-                .approve(await presale.getAddress(), expectedCost);
-            await expect(presale.connect(buyer1).buyTokens(purchaseAmount))
+                .approve(await presale.getAddress(), usdtAmount);
+            await expect(presale.connect(buyer1).buyTokens(usdtAmount))
                 .to.emit(presale, "TokensPurchased")
-                .withArgs(buyer1.address, purchaseAmount, expectedCost);
+                .withArgs(buyer1.address, expectedTokens, usdtAmount);
         });
 
         it("Should fail when user has insufficient USDT for higher price", async function () {
-            const newPrice = ethers.parseEther("100000"); // 10 USDT per token
+            const newPrice = ethers.parseEther("100000000"); // 100M USDT per token
             await presale.updatePresaleConfig(
                 newPrice,
                 await presale.startTime(),
@@ -223,35 +220,32 @@ describe("IAIPresale", function () {
                 MAX_SALE_AMOUNT
             );
 
-            const purchaseAmount = ethers.parseEther("5000"); // 5000 tokens = 50000 USDT needed
+            const usdtAmount = ethers.parseEther("500000000000"); // 500B USDT
+            const expectedTokens = ethers.parseEther("5000"); // 5000 tokens
+
             await usdt
                 .connect(buyer1)
-                .approve(
-                    await presale.getAddress(),
-                    ethers.parseEther("50000")
-                );
+                .approve(await presale.getAddress(), usdtAmount);
 
             await expect(
-                presale.connect(buyer1).buyTokens(purchaseAmount)
+                presale.connect(buyer1).buyTokens(usdtAmount)
             ).to.be.revertedWith("Insufficient USDT balance");
         });
 
         it("Should deduct correct USDT amount for default price", async function () {
-            const purchaseAmount = ethers.parseEther("1000"); // 1000 tokens
-            const expectedCost = purchaseAmount; // 1:1 ratio
+            const usdtAmount = ethers.parseEther("1000"); // 1000 USDT
+            const expectedTokens = usdtAmount; // 1:1 ratio
 
             const initialUSDTBalance = await usdt.balanceOf(buyer1.address);
             await usdt
                 .connect(buyer1)
-                .approve(await presale.getAddress(), expectedCost);
-            await presale.connect(buyer1).buyTokens(purchaseAmount);
+                .approve(await presale.getAddress(), usdtAmount);
+            await presale.connect(buyer1).buyTokens(usdtAmount);
 
             const finalUSDTBalance = await usdt.balanceOf(buyer1.address);
-            expect(initialUSDTBalance - finalUSDTBalance).to.equal(
-                expectedCost
-            );
+            expect(initialUSDTBalance - finalUSDTBalance).to.equal(usdtAmount);
             expect(await usdt.balanceOf(revenueReceiver.address)).to.equal(
-                expectedCost
+                usdtAmount
             );
         });
 
@@ -264,21 +258,19 @@ describe("IAIPresale", function () {
                 MAX_SALE_AMOUNT
             );
 
-            const purchaseAmount = ethers.parseEther("1000"); // 1000 tokens
-            const expectedCost = ethers.parseEther("500"); // 500 USDT
+            const usdtAmount = ethers.parseEther("500"); // 500 USDT
+            const expectedTokens = ethers.parseEther("1000"); // 1000 tokens
 
             const initialUSDTBalance = await usdt.balanceOf(buyer1.address);
             await usdt
                 .connect(buyer1)
-                .approve(await presale.getAddress(), expectedCost);
-            await presale.connect(buyer1).buyTokens(purchaseAmount);
+                .approve(await presale.getAddress(), usdtAmount);
+            await presale.connect(buyer1).buyTokens(usdtAmount);
 
             const finalUSDTBalance = await usdt.balanceOf(buyer1.address);
-            expect(initialUSDTBalance - finalUSDTBalance).to.equal(
-                expectedCost
-            );
+            expect(initialUSDTBalance - finalUSDTBalance).to.equal(usdtAmount);
             expect(await usdt.balanceOf(revenueReceiver.address)).to.equal(
-                expectedCost
+                usdtAmount
             );
         });
 
@@ -291,31 +283,31 @@ describe("IAIPresale", function () {
                 MAX_SALE_AMOUNT
             );
 
-            const purchaseAmount1 = ethers.parseEther("500"); // 500 tokens
-            const purchaseAmount2 = ethers.parseEther("300"); // 300 tokens
-            const expectedCost1 = ethers.parseEther("1000"); // 1000 USDT
-            const expectedCost2 = ethers.parseEther("600"); // 600 USDT
+            const usdtAmount1 = ethers.parseEther("1000"); // 1000 USDT
+            const usdtAmount2 = ethers.parseEther("600"); // 600 USDT
+            const expectedTokens1 = ethers.parseEther("500"); // 500 tokens
+            const expectedTokens2 = ethers.parseEther("300"); // 300 tokens
 
             const initialUSDTBalance = await usdt.balanceOf(buyer1.address);
 
             // First purchase
             await usdt
                 .connect(buyer1)
-                .approve(await presale.getAddress(), expectedCost1);
-            await presale.connect(buyer1).buyTokens(purchaseAmount1);
+                .approve(await presale.getAddress(), usdtAmount1);
+            await presale.connect(buyer1).buyTokens(usdtAmount1);
 
             // Second purchase
             await usdt
                 .connect(buyer1)
-                .approve(await presale.getAddress(), expectedCost2);
-            await presale.connect(buyer1).buyTokens(purchaseAmount2);
+                .approve(await presale.getAddress(), usdtAmount2);
+            await presale.connect(buyer1).buyTokens(usdtAmount2);
 
             const finalUSDTBalance = await usdt.balanceOf(buyer1.address);
             expect(initialUSDTBalance - finalUSDTBalance).to.equal(
-                expectedCost1 + expectedCost2
+                usdtAmount1 + usdtAmount2
             );
             expect(await usdt.balanceOf(revenueReceiver.address)).to.equal(
-                expectedCost1 + expectedCost2
+                usdtAmount1 + usdtAmount2
             );
         });
 
@@ -328,15 +320,15 @@ describe("IAIPresale", function () {
                 MAX_SALE_AMOUNT
             );
 
-            const purchaseAmount = ethers.parseEther("1000"); // 1000 tokens
-            const expectedCost = ethers.parseEther("0.1"); // 0.1 USDT
+            const usdtAmount = ethers.parseEther("0.1"); // 0.1 USDT
+            const expectedTokens = ethers.parseEther("1000"); // 1000 tokens
 
             await usdt
                 .connect(buyer1)
-                .approve(await presale.getAddress(), expectedCost);
-            await expect(presale.connect(buyer1).buyTokens(purchaseAmount))
+                .approve(await presale.getAddress(), usdtAmount);
+            await expect(presale.connect(buyer1).buyTokens(usdtAmount))
                 .to.emit(presale, "TokensPurchased")
-                .withArgs(buyer1.address, purchaseAmount, expectedCost);
+                .withArgs(buyer1.address, expectedTokens, usdtAmount);
         });
 
         it("Should handle large token prices (1000 USDT)", async function () {
@@ -348,24 +340,26 @@ describe("IAIPresale", function () {
                 MAX_SALE_AMOUNT
             );
 
-            const purchaseAmount = ethers.parseEther("100"); // 10 tokens
-            const expectedCost = ethers.parseEther("100000"); // 10000 USDT
+            const usdtAmount = ethers.parseEther("100000"); // 100000 USDT
+            const expectedTokens = ethers.parseEther("100"); // 100 tokens
 
             await usdt
                 .connect(buyer1)
-                .approve(await presale.getAddress(), expectedCost);
-            await expect(presale.connect(buyer1).buyTokens(purchaseAmount))
+                .approve(await presale.getAddress(), usdtAmount);
+            await expect(presale.connect(buyer1).buyTokens(usdtAmount))
                 .to.emit(presale, "TokensPurchased")
-                .withArgs(buyer1.address, purchaseAmount, expectedCost);
+                .withArgs(buyer1.address, expectedTokens, usdtAmount);
         });
 
         it("Should handle price updates between purchases", async function () {
             // First purchase at 1 USDT
-            const purchaseAmount = ethers.parseEther("100");
+            const usdtAmount1 = ethers.parseEther("100"); // 100 USDT
+            const expectedTokens1 = usdtAmount1; // 1:1 ratio
+
             await usdt
                 .connect(buyer1)
-                .approve(await presale.getAddress(), purchaseAmount);
-            await presale.connect(buyer1).buyTokens(purchaseAmount);
+                .approve(await presale.getAddress(), usdtAmount1);
+            await presale.connect(buyer1).buyTokens(usdtAmount1);
 
             // Update price to 2 USDT
             const newPrice = ethers.parseEther("2");
@@ -377,16 +371,15 @@ describe("IAIPresale", function () {
             );
 
             // Second purchase at new price
-            const secondPurchaseAmount = ethers.parseEther("100");
-            const expectedCost = ethers.parseEther("200"); // 100 tokens * 2 USDT
+            const usdtAmount2 = ethers.parseEther("200"); // 200 USDT
+            const expectedTokens2 = ethers.parseEther("100"); // 100 tokens
+
             await usdt
                 .connect(buyer1)
-                .approve(await presale.getAddress(), expectedCost);
-            await expect(
-                presale.connect(buyer1).buyTokens(secondPurchaseAmount)
-            )
+                .approve(await presale.getAddress(), usdtAmount2);
+            await expect(presale.connect(buyer1).buyTokens(usdtAmount2))
                 .to.emit(presale, "TokensPurchased")
-                .withArgs(buyer1.address, secondPurchaseAmount, expectedCost);
+                .withArgs(buyer1.address, expectedTokens2, usdtAmount2);
         });
 
         it("Should handle price with many decimal places (1.234567 USDT)", async function () {
@@ -398,15 +391,15 @@ describe("IAIPresale", function () {
                 MAX_SALE_AMOUNT
             );
 
-            const purchaseAmount = ethers.parseEther("100");
-            const expectedCost = ethers.parseEther("123.4567");
+            const usdtAmount = ethers.parseEther("123.4567"); // 123.4567 USDT
+            const expectedTokens = ethers.parseEther("100"); // 100 tokens
 
             await usdt
                 .connect(buyer1)
-                .approve(await presale.getAddress(), expectedCost);
-            await expect(presale.connect(buyer1).buyTokens(purchaseAmount))
+                .approve(await presale.getAddress(), usdtAmount);
+            await expect(presale.connect(buyer1).buyTokens(usdtAmount))
                 .to.emit(presale, "TokensPurchased")
-                .withArgs(buyer1.address, purchaseAmount, expectedCost);
+                .withArgs(buyer1.address, expectedTokens, usdtAmount);
         });
     });
 

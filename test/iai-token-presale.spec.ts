@@ -11,6 +11,7 @@ describe("IAIPresale", function () {
     let owner: SignerWithAddress;
     let buyer1: SignerWithAddress;
     let buyer2: SignerWithAddress;
+    let revenueReceiver: SignerWithAddress;
 
     const TOKEN_PRICE = ethers.parseEther("1"); // 1 USDT per token
     const MIN_PURCHASE = ethers.parseEther("100"); // 100 tokens
@@ -18,15 +19,15 @@ describe("IAIPresale", function () {
     const MAX_SALE_AMOUNT = ethers.parseEther("1000000"); // 1M tokens
 
     beforeEach(async function () {
-        [owner, buyer1, buyer2] = await ethers.getSigners();
+        [owner, buyer1, buyer2, revenueReceiver] = await ethers.getSigners();
 
         // Deploy mock USDT and IAI tokens
         const TokenFactory = await ethers.getContractFactory("MockERC20");
         usdt = (await (
-            await TokenFactory.deploy("USDT", "USDT")
+            await TokenFactory.deploy("USDT", "USDT", 18, 1_000_000_000)
         ).waitForDeployment()) as IERC20;
         iaiPresaleToken = (await (
-            await TokenFactory.deploy("IAI Token", "IAI")
+            await TokenFactory.deploy("IAI Token", "IAI", 18, 12_500_000)
         ).waitForDeployment()) as IERC20;
 
         // Set up presale timing
@@ -38,6 +39,7 @@ describe("IAIPresale", function () {
         presale = await PresaleFactory.deploy(
             await usdt.getAddress(),
             await iaiPresaleToken.getAddress(),
+            revenueReceiver.address,
             TOKEN_PRICE,
             startTime,
             endTime,

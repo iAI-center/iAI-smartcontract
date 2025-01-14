@@ -15,19 +15,18 @@ contract IAIPresale is Ownable, ReentrancyGuard, Pausable {
     uint256 public startTime;
     uint256 public endTime;
 
-    bool public isWhitelistOnly;
-
     uint256 public totalTokensSold;
     uint256 public maxSaleAmount;
 
-    uint256 public minPurchaseAmount;
+    uint256 public minPurchaseAmount; // 0.1
     uint256 public maxPurchaseAmount;
 
-    mapping(address => bool) public whitelist;
+    // wallet address who will receive the revenue from token selling
+    address revenueReceiver;
+
     mapping(address => uint256) public userTotalPurchased;
 
     event TokensPurchased(address indexed buyer, uint256 amount, uint256 cost);
-    event WhitelistUpdated(address indexed user, bool status);
     event PresaleConfigUpdated(
         uint256 newPrice,
         uint256 newStartTime,
@@ -37,15 +36,16 @@ contract IAIPresale is Ownable, ReentrancyGuard, Pausable {
     event MaxSaleAmountUpdated(uint256 amount);
     event USDTWithdrawn(address to, uint256 amount);
     event PresaleTokensWithdrawn(address to, uint256 amount);
+    event RevenueReceiverUpdated(address newReceiver);
 
     constructor(
         address _usdtToken,
         address _iaiPresaleToken,
+        address _revenueReceiver,
         uint256 _tokenPrice,
         uint256 _startTime,
         uint256 _endTime,
         uint256 _maxSaleAmount,
-        bool _isWhitelistOnly,
         uint256 _minPurchaseAmount,
         uint256 _maxPurchaseAmount
     ) Ownable(msg.sender) {
@@ -59,11 +59,12 @@ contract IAIPresale is Ownable, ReentrancyGuard, Pausable {
 
         usdtToken = IERC20(_usdtToken);
         iaiPresaleToken = IERC20(_iaiPresaleToken);
+        revenueReceiver = _revenueReceiver;
+
         tokenPrice = _tokenPrice;
         startTime = _startTime;
         endTime = _endTime;
         maxSaleAmount = _maxSaleAmount;
-        isWhitelistOnly = _isWhitelistOnly;
 
         minPurchaseAmount = _minPurchaseAmount; // for example: 100 * 1e18 => 100 tokens minimum
         maxPurchaseAmount = _maxPurchaseAmount; // for example: 10000 * 1e18 => 10000 tokens maximum
@@ -78,6 +79,8 @@ contract IAIPresale is Ownable, ReentrancyGuard, Pausable {
     function buyTokens(
         uint256 tokenAmount
     ) external nonReentrant isSaleActive whenNotPaused {
+        require(revenueReceiver != address(0), "Invalid revenue receiver");
+
         require(
             tokenAmount >= minPurchaseAmount,
             "Below minimum purchase amount"
@@ -97,10 +100,6 @@ contract IAIPresale is Ownable, ReentrancyGuard, Pausable {
             "Exceeds max sale amount"
         );
 
-        if (isWhitelistOnly) {
-            require(whitelist[msg.sender], "Not whitelisted");
-        }
-
         uint256 cost = (tokenAmount * tokenPrice) / 1e18;
         require(
             usdtToken.balanceOf(msg.sender) >= cost,
@@ -112,7 +111,7 @@ contract IAIPresale is Ownable, ReentrancyGuard, Pausable {
         );
 
         require(
-            usdtToken.transferFrom(msg.sender, address(this), cost),
+            usdtToken.transferFrom(msg.sender, revenueReceiver, cost),
             "USDT transfer failed"
         );
         require(
@@ -125,22 +124,11 @@ contract IAIPresale is Ownable, ReentrancyGuard, Pausable {
         emit TokensPurchased(msg.sender, tokenAmount, cost);
     }
 
-    function updateWhitelist(
-        address[] calldata users,
-        bool status
-    ) external onlyOwner {
-        for (uint256 i = 0; i < users.length; i++) {
-            whitelist[users[i]] = status;
-            emit WhitelistUpdated(users[i], status);
-        }
-    }
-
     function updatePresaleConfig(
         uint256 newPrice,
         uint256 newStartTime,
         uint256 newEndTime,
-        uint256 newMaxSaleAmount,
-        bool newWhitelistOnly
+        uint256 newMaxSaleAmount
     ) external onlyOwner {
         require(newPrice > 0, "Invalid price");
         require(newStartTime < newEndTime, "Invalid time range");
@@ -152,7 +140,6 @@ contract IAIPresale is Ownable, ReentrancyGuard, Pausable {
         tokenPrice = newPrice;
         startTime = newStartTime;
         endTime = newEndTime;
-        isWhitelistOnly = newWhitelistOnly;
 
         emit PresaleConfigUpdated(newPrice, newStartTime, newEndTime);
     }
@@ -197,14 +184,6 @@ contract IAIPresale is Ownable, ReentrancyGuard, Pausable {
             : 0;
     }
 
-    function withdrawUSDT(address to) external onlyOwner {
-        require(to != address(0), "Invalid address");
-        uint256 balance = usdtToken.balanceOf(address(this));
-        require(balance > 0, "No USDT to withdraw");
-        require(usdtToken.transfer(to, balance), "USDT transfer failed");
-        emit USDTWithdrawn(to, balance);
-    }
-
     function withdrawUnsoldPresaleTokens() external onlyOwner {
         require(block.timestamp > endTime, "Presale is not ended");
         uint256 balance = iaiPresaleToken.balanceOf(address(this));
@@ -227,5 +206,11 @@ contract IAIPresale is Ownable, ReentrancyGuard, Pausable {
 
     function getAvailableSellAmount() public view returns (uint256) {
         return maxSaleAmount - totalTokensSold;
+    }
+
+    function setRevenueReceiver(address _revenueReceiver) external onlyOwner {
+        require(_revenueReceiver != address(0), "Invalid address");
+        revenueReceiver = _revenueReceiver;
+        emit RevenueReceiverUpdated(_revenueReceiver);
     }
 }

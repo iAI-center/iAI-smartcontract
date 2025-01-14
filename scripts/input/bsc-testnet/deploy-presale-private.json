@@ -1,0 +1,29 @@
+{
+    "iaiToken": {
+        "name": "IAI Presale Token",
+        "symbol": "IAI_PRESALE",
+        "decimal": 18,
+        "initialSupply": "12500000.0",
+        "address": "",
+        "__note": "if an address is provided, the contract will use this address instead of deploying a new one, and it checks name, symbol and decimal must match the provided address"
+    },
+    "usdt": {
+        "name": "Tether USD",
+        "symbol": "USDT",
+        "decimal": 18,
+        "address": "",
+        "__note": "if an address is provided, the contract will use this address instead of deploying a new one, and it checks name, symbol and decimal must match the provided address"
+    },
+    "presale": {
+        "tokenPrice": "0.06",
+        "startTime": 1,
+        "endTime": 2840140800,
+        "__note__endTime": "Thu Jan 01 2060 00:00:00 GMT+0000 - this is far in the future",
+        "maxSaleAmount": "12500000.0",
+        "minPurchase": "0.1",
+        "maxPurchase": "115792089237316195423570985008687907853269984665640564039457",
+        "__note__maxPurchase": "maxPurchase is set to closely uint256 max value to represent no limit on maxPurchase"
+    },
+    "newOwner": "0x0000000000000000000000000000000000000000",
+    "generateNewWalletForTestUSDTHolder": true
+}

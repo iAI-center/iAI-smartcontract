@@ -4,7 +4,23 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract MockERC20 is ERC20 {
-    constructor(string memory name, string memory symbol) ERC20(name, symbol) {
-        _mint(msg.sender, 1000000000 * 10 ** decimals());
+    uint8 private _decimals;
+
+    constructor(
+        string memory name,
+        string memory symbol,
+        uint8 decimal_places,
+        uint256 initialSupply
+    ) ERC20(name, symbol) {
+        _decimals = decimal_places;
+        _mint(msg.sender, initialSupply * 10 ** decimal_places);
+    }
+
+    function decimals() public view virtual override returns (uint8) {
+        return _decimals;
+    }
+
+    function mint(address to, uint256 amount) external {
+        _mint(to, amount);
     }
 }

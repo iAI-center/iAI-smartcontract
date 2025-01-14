@@ -65,7 +65,7 @@ describe("IAIPresale", function () {
         );
 
         // Fund buyers with USDT
-        const usdtAmount = ethers.parseEther("20000");
+        const usdtAmount = ethers.parseEther("2000000");
         await usdt.transfer(buyer1.address, usdtAmount);
         await usdt.transfer(buyer2.address, usdtAmount);
     });
@@ -215,7 +215,7 @@ describe("IAIPresale", function () {
         });
 
         it("Should fail when user has insufficient USDT for higher price", async function () {
-            const newPrice = ethers.parseEther("10"); // 10 USDT per token
+            const newPrice = ethers.parseEther("100000"); // 10 USDT per token
             await presale.updatePresaleConfig(
                 newPrice,
                 await presale.startTime(),
@@ -317,6 +317,96 @@ describe("IAIPresale", function () {
             expect(await usdt.balanceOf(revenueReceiver.address)).to.equal(
                 expectedCost1 + expectedCost2
             );
+        });
+
+        it("Should handle very small fractional prices (0.0001 USDT)", async function () {
+            const newPrice = ethers.parseEther("0.0001"); // 0.0001 USDT per token
+            await presale.updatePresaleConfig(
+                newPrice,
+                await presale.startTime(),
+                await presale.endTime(),
+                MAX_SALE_AMOUNT
+            );
+
+            const purchaseAmount = ethers.parseEther("1000"); // 1000 tokens
+            const expectedCost = ethers.parseEther("0.1"); // 0.1 USDT
+
+            await usdt
+                .connect(buyer1)
+                .approve(await presale.getAddress(), expectedCost);
+            await expect(presale.connect(buyer1).buyTokens(purchaseAmount))
+                .to.emit(presale, "TokensPurchased")
+                .withArgs(buyer1.address, purchaseAmount, expectedCost);
+        });
+
+        it("Should handle large token prices (1000 USDT)", async function () {
+            const newPrice = ethers.parseEther("1000"); // 1000 USDT per token
+            await presale.updatePresaleConfig(
+                newPrice,
+                await presale.startTime(),
+                await presale.endTime(),
+                MAX_SALE_AMOUNT
+            );
+
+            const purchaseAmount = ethers.parseEther("100"); // 10 tokens
+            const expectedCost = ethers.parseEther("100000"); // 10000 USDT
+
+            await usdt
+                .connect(buyer1)
+                .approve(await presale.getAddress(), expectedCost);
+            await expect(presale.connect(buyer1).buyTokens(purchaseAmount))
+                .to.emit(presale, "TokensPurchased")
+                .withArgs(buyer1.address, purchaseAmount, expectedCost);
+        });
+
+        it("Should handle price updates between purchases", async function () {
+            // First purchase at 1 USDT
+            const purchaseAmount = ethers.parseEther("100");
+            await usdt
+                .connect(buyer1)
+                .approve(await presale.getAddress(), purchaseAmount);
+            await presale.connect(buyer1).buyTokens(purchaseAmount);
+
+            // Update price to 2 USDT
+            const newPrice = ethers.parseEther("2");
+            await presale.updatePresaleConfig(
+                newPrice,
+                await presale.startTime(),
+                await presale.endTime(),
+                MAX_SALE_AMOUNT
+            );
+
+            // Second purchase at new price
+            const secondPurchaseAmount = ethers.parseEther("100");
+            const expectedCost = ethers.parseEther("200"); // 100 tokens * 2 USDT
+            await usdt
+                .connect(buyer1)
+                .approve(await presale.getAddress(), expectedCost);
+            await expect(
+                presale.connect(buyer1).buyTokens(secondPurchaseAmount)
+            )
+                .to.emit(presale, "TokensPurchased")
+                .withArgs(buyer1.address, secondPurchaseAmount, expectedCost);
+        });
+
+        it("Should handle price with many decimal places (1.234567 USDT)", async function () {
+            const newPrice = ethers.parseEther("1.234567");
+            await presale.updatePresaleConfig(
+                newPrice,
+                await presale.startTime(),
+                await presale.endTime(),
+                MAX_SALE_AMOUNT
+            );
+
+            const purchaseAmount = ethers.parseEther("100");
+            const expectedCost = ethers.parseEther("123.4567");
+
+            await usdt
+                .connect(buyer1)
+                .approve(await presale.getAddress(), expectedCost);
+            await expect(presale.connect(buyer1).buyTokens(purchaseAmount))
+                .to.emit(presale, "TokensPurchased")
+                .withArgs(buyer1.address, purchaseAmount, expectedCost);
         });
     });
 

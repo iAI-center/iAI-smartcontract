@@ -22,7 +22,7 @@ contract IAIPresale is Ownable, ReentrancyGuard, Pausable {
     uint256 public maxPurchaseAmount;
 
     // wallet address who will receive the revenue from token selling
-    address revenueReceiver;
+    address public revenueReceiver;
 
     mapping(address => uint256) public userTotalPurchased;
 

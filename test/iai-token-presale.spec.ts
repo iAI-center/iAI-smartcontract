@@ -24,10 +24,20 @@ describe("IAIPresale", function () {
         // Deploy mock USDT and IAI tokens
         const TokenFactory = await ethers.getContractFactory("MockERC20");
         usdt = (await (
-            await TokenFactory.deploy("USDT", "USDT", 18, 1_000_000_000)
+            await TokenFactory.deploy(
+                "USDT",
+                "USDT",
+                18,
+                ethers.parseEther("1000000000")
+            )
         ).waitForDeployment()) as IERC20;
         iaiPresaleToken = (await (
-            await TokenFactory.deploy("IAI Token", "IAI", 18, 12_500_000)
+            await TokenFactory.deploy(
+                "IAI Token",
+                "IAI",
+                18,
+                ethers.parseEther("12500000")
+            )
         ).waitForDeployment()) as IERC20;
 
         // Set up presale timing
@@ -44,7 +54,6 @@ describe("IAIPresale", function () {
             startTime,
             endTime,
             MAX_SALE_AMOUNT,
-            true, // whitelist only
             MIN_PURCHASE,
             MAX_PURCHASE
         );
@@ -67,30 +76,18 @@ describe("IAIPresale", function () {
             expect(await presale.iaiPresaleToken()).to.equal(
                 await iaiPresaleToken.getAddress()
             );
+            expect(await presale.revenueReceiver()).to.equal(
+                revenueReceiver.address
+            );
             expect(await presale.tokenPrice()).to.equal(TOKEN_PRICE);
             expect(await presale.maxSaleAmount()).to.equal(MAX_SALE_AMOUNT);
-            expect(await presale.isWhitelistOnly()).to.be.true;
             expect(await presale.minPurchaseAmount()).to.equal(MIN_PURCHASE);
             expect(await presale.maxPurchaseAmount()).to.equal(MAX_PURCHASE);
         });
     });
 
-    describe("Whitelist Management", function () {
-        it("Should allow owner to add users to whitelist", async function () {
-            await presale.updateWhitelist([buyer1.address], true);
-            expect(await presale.whitelist(buyer1.address)).to.be.true;
-        });
-
-        it("Should allow owner to remove users from whitelist", async function () {
-            await presale.updateWhitelist([buyer1.address], true);
-            await presale.updateWhitelist([buyer1.address], false);
-            expect(await presale.whitelist(buyer1.address)).to.be.false;
-        });
-    });
-
     describe("Token Purchase", function () {
         beforeEach(async function () {
-            await presale.updateWhitelist([buyer1.address], true);
             await time.increase(3600); // Move past start time
             await usdt
                 .connect(buyer1)
@@ -100,13 +97,20 @@ describe("IAIPresale", function () {
                 );
         });
 
-        it("Should allow whitelisted users to purchase tokens", async function () {
+        it("Should process purchase and send USDT to revenue receiver", async function () {
             const purchaseAmount = ethers.parseEther("1000");
+            const initialReceiverBalance = await usdt.balanceOf(
+                revenueReceiver.address
+            );
+
             await expect(presale.connect(buyer1).buyTokens(purchaseAmount))
                 .to.emit(presale, "TokensPurchased")
                 .withArgs(buyer1.address, purchaseAmount, purchaseAmount);
 
-            expect(await presale.userTotalPurchased(buyer1.address)).to.equal(
+            const finalReceiverBalance = await usdt.balanceOf(
+                revenueReceiver.address
+            );
+            expect(finalReceiverBalance - initialReceiverBalance).to.equal(
                 purchaseAmount
             );
         });
@@ -132,8 +136,7 @@ describe("IAIPresale", function () {
                 TOKEN_PRICE,
                 currentTime + 10,
                 currentTime + 86400,
-                MAX_SALE_AMOUNT,
-                false // disable whitelist
+                MAX_SALE_AMOUNT
             );
 
             await time.increase(20); // Move past new start time
@@ -156,7 +159,6 @@ describe("IAIPresale", function () {
 
     describe("Price Variations", function () {
         beforeEach(async function () {
-            await presale.updateWhitelist([buyer1.address], true);
             await time.increase(3600);
         });
 
@@ -178,8 +180,7 @@ describe("IAIPresale", function () {
                 newPrice,
                 await presale.startTime(),
                 await presale.endTime(),
-                MAX_SALE_AMOUNT,
-                true
+                MAX_SALE_AMOUNT
             );
 
             const purchaseAmount = ethers.parseEther("1000"); // 1000 tokens
@@ -199,8 +200,7 @@ describe("IAIPresale", function () {
                 newPrice,
                 await presale.startTime(),
                 await presale.endTime(),
-                MAX_SALE_AMOUNT,
-                true
+                MAX_SALE_AMOUNT
             );
 
             const purchaseAmount = ethers.parseEther("1000"); // 1000 tokens
@@ -220,8 +220,7 @@ describe("IAIPresale", function () {
                 newPrice,
                 await presale.startTime(),
                 await presale.endTime(),
-                MAX_SALE_AMOUNT,
-                true
+                MAX_SALE_AMOUNT
             );
 
             const purchaseAmount = ethers.parseEther("5000"); // 5000 tokens = 50000 USDT needed
@@ -251,7 +250,7 @@ describe("IAIPresale", function () {
             expect(initialUSDTBalance - finalUSDTBalance).to.equal(
                 expectedCost
             );
-            expect(await usdt.balanceOf(await presale.getAddress())).to.equal(
+            expect(await usdt.balanceOf(revenueReceiver.address)).to.equal(
                 expectedCost
             );
         });
@@ -262,8 +261,7 @@ describe("IAIPresale", function () {
                 newPrice,
                 await presale.startTime(),
                 await presale.endTime(),
-                MAX_SALE_AMOUNT,
-                true
+                MAX_SALE_AMOUNT
             );
 
             const purchaseAmount = ethers.parseEther("1000"); // 1000 tokens
@@ -279,7 +277,7 @@ describe("IAIPresale", function () {
             expect(initialUSDTBalance - finalUSDTBalance).to.equal(
                 expectedCost
             );
-            expect(await usdt.balanceOf(await presale.getAddress())).to.equal(
+            expect(await usdt.balanceOf(revenueReceiver.address)).to.equal(
                 expectedCost
             );
         });
@@ -290,8 +288,7 @@ describe("IAIPresale", function () {
                 newPrice,
                 await presale.startTime(),
                 await presale.endTime(),
-                MAX_SALE_AMOUNT,
-                true
+                MAX_SALE_AMOUNT
             );
 
             const purchaseAmount1 = ethers.parseEther("500"); // 500 tokens
@@ -317,7 +314,7 @@ describe("IAIPresale", function () {
             expect(initialUSDTBalance - finalUSDTBalance).to.equal(
                 expectedCost1 + expectedCost2
             );
-            expect(await usdt.balanceOf(await presale.getAddress())).to.equal(
+            expect(await usdt.balanceOf(revenueReceiver.address)).to.equal(
                 expectedCost1 + expectedCost2
             );
         });
@@ -333,14 +330,12 @@ describe("IAIPresale", function () {
                 newPrice,
                 newStartTime,
                 newEndTime,
-                MAX_SALE_AMOUNT,
-                false
+                MAX_SALE_AMOUNT
             );
 
             expect(await presale.tokenPrice()).to.equal(newPrice);
             expect(await presale.startTime()).to.equal(newStartTime);
             expect(await presale.endTime()).to.equal(newEndTime);
-            expect(await presale.isWhitelistOnly()).to.be.false;
         });
     });
 
@@ -354,7 +349,6 @@ describe("IAIPresale", function () {
         });
 
         it("Should not allow purchases when paused", async function () {
-            await presale.updateWhitelist([buyer1.address], true);
             await time.increase(3600);
             await presale.pause();
 
@@ -364,23 +358,32 @@ describe("IAIPresale", function () {
         });
     });
 
-    describe("Withdrawals", function () {
-        it("Should allow owner to withdraw USDT", async function () {
-            // First make a purchase to have USDT in the contract
-            await presale.updateWhitelist([buyer1.address], true);
-            await time.increase(3600);
-            await usdt
-                .connect(buyer1)
-                .approve(await presale.getAddress(), ethers.parseEther("1000"));
-            await presale.connect(buyer1).buyTokens(ethers.parseEther("1000"));
-
-            const initialBalance = await usdt.balanceOf(owner.address);
-            await presale.withdrawUSDT(owner.address);
-            const finalBalance = await usdt.balanceOf(owner.address);
-
-            expect(finalBalance).to.be.gt(initialBalance);
+    describe("Revenue Receiver Management", function () {
+        it("Should allow owner to update revenue receiver", async function () {
+            const newReceiver = buyer2.address;
+            await expect(presale.setRevenueReceiver(newReceiver))
+                .to.emit(presale, "RevenueReceiverUpdated")
+                .withArgs(newReceiver);
+            expect(await presale.revenueReceiver()).to.equal(newReceiver);
         });
 
+        it("Should not allow setting zero address as revenue receiver", async function () {
+            await expect(
+                presale.setRevenueReceiver(ethers.ZeroAddress)
+            ).to.be.revertedWith("Invalid address");
+        });
+
+        it("Should not allow non-owner to update revenue receiver", async function () {
+            await expect(
+                presale.connect(buyer1).setRevenueReceiver(buyer2.address)
+            ).to.be.revertedWithCustomError(
+                presale,
+                "OwnableUnauthorizedAccount"
+            );
+        });
+    });
+
+    describe("Withdrawals", function () {
         it("Should allow owner to withdraw unsold tokens after presale", async function () {
             await time.increase(90000); // Move past end time
             const initialBalance = await iaiPresaleToken.balanceOf(

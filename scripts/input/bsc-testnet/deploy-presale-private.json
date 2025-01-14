@@ -22,7 +22,8 @@
         "maxSaleAmount": "12500000.0",
         "minPurchase": "0.1",
         "maxPurchase": "115792089237316195423570985008687907853269984665640564039457",
-        "__note__maxPurchase": "maxPurchase is set to closely uint256 max value to represent no limit on maxPurchase"
+        "__note__maxPurchase": "maxPurchase is set to closely uint256 max value to represent no limit on maxPurchase",
+        "revenueReceiver": "0x258c785f73E3e806deb3d9AE67AcD6eAe1983767"
     },
     "newOwner": "0x0000000000000000000000000000000000000000",
     "generateNewWalletForTestUSDTHolder": true

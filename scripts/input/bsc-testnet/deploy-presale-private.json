@@ -25,6 +25,6 @@
         "__note__maxPurchase": "maxPurchase is set to closely uint256 max value to represent no limit on maxPurchase",
         "revenueReceiver": "0x258c785f73E3e806deb3d9AE67AcD6eAe1983767"
     },
-    "newOwner": "0x0000000000000000000000000000000000000000",
+    "newOwner": "0x01e118be20f9e347F91f333fE42Fd571964C3544",
     "generateNewWalletForTestUSDTHolder": true
 }

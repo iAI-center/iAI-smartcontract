@@ -211,7 +211,7 @@ const program = new Command("deploy-presale")
                 .connect(deployer)
                 .transfer(
                     presaleAddress,
-                    await iaiToken.balanceOf(deployer.address)
+                    ethers.parseEther(input.presale.maxSaleAmount)
                 );
             await tx.wait();
             console.log(

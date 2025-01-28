@@ -3,7 +3,7 @@
         "name": "IAI Presale Token",
         "symbol": "IAI_PRESALE",
         "decimal": 18,
-        "initialSupply": "12500000.0",
+        "initialSupply": "25000000.0",
         "address": "",
         "__note": "if an address is provided, the contract will use this address instead of deploying a new one, and it checks name, symbol and decimal must match the provided address"
     },
@@ -16,8 +16,8 @@
     },
     "presale": {
         "tokenPrice": "0.06",
-        "startTime": 1736985600,
-        "__note__startTime": "Thu Jan 16 2025 00:00:00 GMT+0000",
+        "startTime": 1736874000,
+        "__note__startTime": "Tue Jan 14 2025 17:00:00 GMT+0000",
         "endTime": 2840140800,
         "__note__endTime": "Thu Jan 01 2060 00:00:00 GMT+0000 - this is far in the future",
         "maxSaleAmount": "12500000.0",
@@ -27,5 +27,5 @@
         "revenueReceiver": "0x258c785f73E3e806deb3d9AE67AcD6eAe1983767"
     },
     "newOwner": "0x01e118be20f9e347F91f333fE42Fd571964C3544",
-    "generateNewWalletForTestUSDTHolder": true
+    "generateNewWalletForTestUSDTHolder": false
 }

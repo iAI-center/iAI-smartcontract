@@ -31,11 +31,14 @@ contract IAIPresaleV2 is Ownable, ReentrancyGuard, Pausable {
 
     address[] private whitelistedAddresses;
 
+    bool public isWhitelistEnabled = true; // New state variable
+
     event TokensPurchased(address indexed buyer, uint256 amount, uint256 cost);
     event PresaleConfigUpdated(
         uint256 newPrice,
         uint256 newStartTime,
-        uint256 newEndTime
+        uint256 newEndTime,
+        bool newIdWhitelistEnabled
     );
 
     event PurchaseLimitsUpdated(uint256 minAmount, uint256 maxAmount);
@@ -55,6 +58,7 @@ contract IAIPresaleV2 is Ownable, ReentrancyGuard, Pausable {
     );
 
     event PrematureTokenWithdrawal(address to, uint256 amount);
+    event WhitelistEnablingChanged(bool enabled); // New event
 
     constructor(
         address _usdtToken,
@@ -64,7 +68,8 @@ contract IAIPresaleV2 is Ownable, ReentrancyGuard, Pausable {
         uint256 _startTime,
         uint256 _endTime,
         uint256 _maxSaleAmount,
-        uint256 _minPurchaseAmount
+        uint256 _minPurchaseAmount,
+        bool _isWhitelistEnabled
     ) Ownable(msg.sender) {
         require(
             _usdtToken != address(0) && _iaiPresaleToken != address(0),
@@ -84,6 +89,8 @@ contract IAIPresaleV2 is Ownable, ReentrancyGuard, Pausable {
         maxSaleAmount = _maxSaleAmount;
 
         minPurchaseAmount = _minPurchaseAmount; // for example: 100 * 1e18 => 100 tokens minimum
+
+        isWhitelistEnabled = _isWhitelistEnabled;
     }
 
     modifier isSaleActive() {
@@ -95,7 +102,9 @@ contract IAIPresaleV2 is Ownable, ReentrancyGuard, Pausable {
     function buyTokens(
         uint256 usdtAmount
     ) external nonReentrant isSaleActive whenNotPaused {
-        require(whitelisted[msg.sender], "Address not whitelisted");
+        if (isWhitelistEnabled) {
+            require(whitelisted[msg.sender], "Address not whitelisted");
+        }
         require(revenueReceiver != address(0), "Invalid revenue receiver");
         require(usdtAmount > 0, "Amount must be greater than 0");
 
@@ -108,8 +117,8 @@ contract IAIPresaleV2 is Ownable, ReentrancyGuard, Pausable {
         );
 
         uint256 maxAmount = whitelistMaxAmount[msg.sender];
-        if (maxAmount > 0) {
-            // if maxAmount is 0, there is no limit
+        if (isWhitelistEnabled && maxAmount > 0) {
+            // Check limits only if whitelist is enabled and max amount is set
             require(
                 userTotalPurchased[msg.sender] + tokenAmount <= maxAmount,
                 "Exceeds total allowed purchase amount"
@@ -148,7 +157,8 @@ contract IAIPresaleV2 is Ownable, ReentrancyGuard, Pausable {
         uint256 newPrice,
         uint256 newStartTime,
         uint256 newEndTime,
-        uint256 newMaxSaleAmount
+        uint256 newMaxSaleAmount,
+        bool newIsWhitelistEnabled
     ) external onlyOwner {
         require(newPrice > 0, "Invalid price");
         require(newStartTime < newEndTime, "Invalid time range");
@@ -160,8 +170,15 @@ contract IAIPresaleV2 is Ownable, ReentrancyGuard, Pausable {
         tokenPrice = newPrice;
         startTime = newStartTime;
         endTime = newEndTime;
+        maxSaleAmount = newMaxSaleAmount;
+        isWhitelistEnabled = newIsWhitelistEnabled;
 
-        emit PresaleConfigUpdated(newPrice, newStartTime, newEndTime);
+        emit PresaleConfigUpdated(
+            newPrice,
+            newStartTime,
+            newEndTime,
+            newIsWhitelistEnabled
+        );
     }
 
     function setMinPurchaseAmount(uint256 _minAmount) external onlyOwner {
@@ -386,5 +403,11 @@ contract IAIPresaleV2 is Ownable, ReentrancyGuard, Pausable {
         );
 
         emit PrematureTokenWithdrawal(owner(), amount);
+    }
+
+    // Add new function to toggle whitelist
+    function setWhitelistStatus(bool _status) external onlyOwner {
+        isWhitelistEnabled = _status;
+        emit WhitelistEnablingChanged(_status);
     }
 }

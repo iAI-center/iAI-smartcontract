@@ -33,6 +33,8 @@ const config: HardhatUserConfig = {
             "contracts/CallHelper.sol": SOLC_0_8_27_NO_OPTIMIZER,
             "contracts/IAI.sol": SOLC_0_8_27_NO_OPTIMIZER,
             "contracts/RewardDistributor.sol": SOLC_0_8_27_NO_OPTIMIZER,
+            "contracts/IAIPresale.sol": SOLC_0_8_27_NO_OPTIMIZER,
+            "contracts/IAIPresaleV2.sol": SOLC_0_8_27_NO_OPTIMIZER,
         },
     },
     networks: {

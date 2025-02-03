@@ -5,8 +5,11 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
+import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 contract IAIPresaleV2 is Ownable, ReentrancyGuard, Pausable {
+    using EnumerableSet for EnumerableSet.AddressSet;
+
     IERC20 public usdtToken;
     IERC20 public iaiPresaleToken;
 
@@ -29,7 +32,7 @@ contract IAIPresaleV2 is Ownable, ReentrancyGuard, Pausable {
 
     mapping(address => uint256) public whitelistMaxAmount;
 
-    address[] private whitelistedAddresses;
+    EnumerableSet.AddressSet private whitelistedAddresses;
 
     bool public isWhitelistEnabled = true; // New state variable
 
@@ -261,24 +264,17 @@ contract IAIPresaleV2 is Ownable, ReentrancyGuard, Pausable {
 
         whitelisted[account] = true;
         whitelistUSDTMaxAmount[account] = maxUSDTAmount;
-        whitelistedAddresses.push(account);
+        whitelistedAddresses.add(account);
+
         emit AddressWhitelisted(account, maxUSDTAmount);
     }
 
     function removeFromWhitelist(address account) external onlyOwner {
         require(whitelisted[account], "Address not whitelisted");
-        whitelisted[account] = false;
 
-        // Remove from array by finding and replacing with last element
-        for (uint256 i = 0; i < whitelistedAddresses.length; i++) {
-            if (whitelistedAddresses[i] == account) {
-                whitelistedAddresses[i] = whitelistedAddresses[
-                    whitelistedAddresses.length - 1
-                ];
-                whitelistedAddresses.pop();
-                break;
-            }
-        }
+        whitelistedAddresses.remove(account);
+        delete whitelisted[account];
+        delete whitelistUSDTMaxAmount[account];
 
         emit AddressRemovedFromWhitelist(account);
     }
@@ -293,10 +289,19 @@ contract IAIPresaleV2 is Ownable, ReentrancyGuard, Pausable {
         );
 
         for (uint256 i = 0; i < accounts.length; i++) {
-            require(accounts[i] != address(0), "Invalid address");
-            whitelisted[accounts[i]] = true;
-            whitelistUSDTMaxAmount[accounts[i]] = maxUSDTAmounts[i];
+            address account = accounts[i];
+            require(account != address(0), "Invalid address");
+
+            if (!whitelisted[account]) {
+                whitelisted[account] = true;
+                whitelistUSDTMaxAmount[account] = maxUSDTAmounts[i];
+                whitelistedAddresses.add(account);
+            } else {
+                // Just update max amount if already whitelisted
+                whitelistUSDTMaxAmount[account] = maxUSDTAmounts[i];
+            }
         }
+
         emit BatchWhitelistAdded(accounts, maxUSDTAmounts);
     }
 
@@ -304,10 +309,14 @@ contract IAIPresaleV2 is Ownable, ReentrancyGuard, Pausable {
         address[] calldata accounts
     ) external onlyOwner {
         for (uint256 i = 0; i < accounts.length; i++) {
-            if (whitelisted[accounts[i]]) {
-                whitelisted[accounts[i]] = false;
+            address account = accounts[i];
+            if (whitelisted[account]) {
+                whitelistedAddresses.remove(account);
+                delete whitelisted[account];
+                delete whitelistUSDTMaxAmount[account];
             }
         }
+
         emit BatchWhitelistRemoved(accounts);
     }
 
@@ -366,7 +375,7 @@ contract IAIPresaleV2 is Ownable, ReentrancyGuard, Pausable {
             uint256 total
         )
     {
-        uint256 totalAddresses = whitelistedAddresses.length;
+        uint256 totalAddresses = whitelistedAddresses.length();
 
         if (offset >= totalAddresses) {
             return (new address[](0), new uint256[](0), totalAddresses);
@@ -381,7 +390,7 @@ contract IAIPresaleV2 is Ownable, ReentrancyGuard, Pausable {
         maxUSDTAmounts = new uint256[](size);
 
         for (uint256 i = 0; i < size; i++) {
-            address account = whitelistedAddresses[offset + i];
+            address account = whitelistedAddresses.at(offset + i);
             addresses[i] = account;
             maxUSDTAmounts[i] = whitelistUSDTMaxAmount[account];
         }
@@ -390,7 +399,7 @@ contract IAIPresaleV2 is Ownable, ReentrancyGuard, Pausable {
     }
 
     function getTotalWhitelistedAddresses() external view returns (uint256) {
-        return whitelistedAddresses.length;
+        return whitelistedAddresses.length();
     }
 
     // prematureWithdrawPresaleTokens function will be used to withdraw unsold tokens anytime

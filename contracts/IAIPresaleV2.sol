@@ -33,6 +33,10 @@ contract IAIPresaleV2 is Ownable, ReentrancyGuard, Pausable {
 
     bool public isWhitelistEnabled = true; // New state variable
 
+    // tracking user's spending USDT amounts
+    mapping(address => uint256) public userTotalUSDTSpent;
+    mapping(address => uint256) public whitelistUSDTMaxAmount;
+
     event TokensPurchased(address indexed buyer, uint256 amount, uint256 cost);
     event PresaleConfigUpdated(
         uint256 newPrice,
@@ -116,12 +120,12 @@ contract IAIPresaleV2 is Ownable, ReentrancyGuard, Pausable {
             "Below minimum purchase amount"
         );
 
-        uint256 maxAmount = whitelistMaxAmount[msg.sender];
-        if (isWhitelistEnabled && maxAmount > 0) {
-            // Check limits only if whitelist is enabled and max amount is set
+        uint256 maxUSDTAmount = whitelistUSDTMaxAmount[msg.sender];
+        if (isWhitelistEnabled && maxUSDTAmount > 0) {
+            // Check USDT spending limits instead of token amounts
             require(
-                userTotalPurchased[msg.sender] + tokenAmount <= maxAmount,
-                "Exceeds total allowed purchase amount"
+                userTotalUSDTSpent[msg.sender] + usdtAmount <= maxUSDTAmount,
+                "Exceeds total allowed USDT spending amount"
             );
         }
 
@@ -149,7 +153,7 @@ contract IAIPresaleV2 is Ownable, ReentrancyGuard, Pausable {
         );
 
         totalTokensSold += tokenAmount;
-        userTotalPurchased[msg.sender] += tokenAmount;
+        userTotalUSDTSpent[msg.sender] += usdtAmount; // Track USDT spent instead of tokens
         emit TokensPurchased(msg.sender, tokenAmount, usdtAmount);
     }
 
@@ -250,15 +254,15 @@ contract IAIPresaleV2 is Ownable, ReentrancyGuard, Pausable {
     // Add new functions for whitelist management
     function addToWhitelist(
         address account,
-        uint256 maxAmount // 0 means no limit
+        uint256 maxUSDTAmount // 0 means no limit
     ) external onlyOwner {
         require(account != address(0), "Invalid address");
         require(!whitelisted[account], "Address already whitelisted");
 
         whitelisted[account] = true;
-        whitelistMaxAmount[account] = maxAmount;
+        whitelistUSDTMaxAmount[account] = maxUSDTAmount;
         whitelistedAddresses.push(account);
-        emit AddressWhitelisted(account, maxAmount);
+        emit AddressWhitelisted(account, maxUSDTAmount);
     }
 
     function removeFromWhitelist(address account) external onlyOwner {
@@ -281,16 +285,19 @@ contract IAIPresaleV2 is Ownable, ReentrancyGuard, Pausable {
 
     function batchAddToWhitelist(
         address[] calldata accounts,
-        uint256[] calldata maxAmounts // 0 means no limit
+        uint256[] calldata maxUSDTAmounts // 0 means no limit
     ) external onlyOwner {
-        require(accounts.length == maxAmounts.length, "Arrays length mismatch");
+        require(
+            accounts.length == maxUSDTAmounts.length,
+            "Arrays length mismatch"
+        );
 
         for (uint256 i = 0; i < accounts.length; i++) {
             require(accounts[i] != address(0), "Invalid address");
             whitelisted[accounts[i]] = true;
-            whitelistMaxAmount[accounts[i]] = maxAmounts[i];
+            whitelistUSDTMaxAmount[accounts[i]] = maxUSDTAmounts[i];
         }
-        emit BatchWhitelistAdded(accounts, maxAmounts);
+        emit BatchWhitelistAdded(accounts, maxUSDTAmounts);
     }
 
     function batchRemoveFromWhitelist(
@@ -306,40 +313,40 @@ contract IAIPresaleV2 is Ownable, ReentrancyGuard, Pausable {
 
     function updateWhitelistMaxAmount(
         address account,
-        uint256 newMaxAmount // 0 means no limit
+        uint256 newMaxUSDTAmount // 0 means no limit
     ) external onlyOwner {
         require(whitelisted[account], "Address not whitelisted");
-        if (newMaxAmount > 0) {
+        if (newMaxUSDTAmount > 0) {
             require(
-                newMaxAmount >= userTotalPurchased[account],
-                "New max amount below already purchased amount"
+                newMaxUSDTAmount >= userTotalUSDTSpent[account],
+                "New max amount below already spent USDT amount"
             );
         }
 
-        whitelistMaxAmount[account] = newMaxAmount;
-        emit AddressWhitelisted(account, newMaxAmount);
+        whitelistUSDTMaxAmount[account] = newMaxUSDTAmount;
+        emit AddressWhitelisted(account, newMaxUSDTAmount);
     }
 
     function batchUpdateWhitelistMaxAmount(
         address[] calldata accounts,
-        uint256[] calldata newMaxAmounts
+        uint256[] calldata newMaxUSDTAmounts
     ) external onlyOwner {
         require(
-            accounts.length == newMaxAmounts.length,
+            accounts.length == newMaxUSDTAmounts.length,
             "Arrays length mismatch"
         );
 
         for (uint256 i = 0; i < accounts.length; i++) {
             require(whitelisted[accounts[i]], "Address not whitelisted");
-            if (newMaxAmounts[i] > 0) {
+            if (newMaxUSDTAmounts[i] > 0) {
                 require(
-                    newMaxAmounts[i] >= userTotalPurchased[accounts[i]],
-                    "New max amount below already purchased amount"
+                    newMaxUSDTAmounts[i] >= userTotalUSDTSpent[accounts[i]],
+                    "New max amount below already spent USDT amount"
                 );
             }
-            whitelistMaxAmount[accounts[i]] = newMaxAmounts[i];
+            whitelistUSDTMaxAmount[accounts[i]] = newMaxUSDTAmounts[i];
         }
-        emit BatchWhitelistMaxAmountUpdated(accounts, newMaxAmounts);
+        emit BatchWhitelistMaxAmountUpdated(accounts, newMaxUSDTAmounts);
     }
 
     function isWhitelisted(address account) external view returns (bool) {
@@ -355,7 +362,7 @@ contract IAIPresaleV2 is Ownable, ReentrancyGuard, Pausable {
         view
         returns (
             address[] memory addresses,
-            uint256[] memory maxAmounts,
+            uint256[] memory maxUSDTAmounts,
             uint256 total
         )
     {
@@ -371,15 +378,15 @@ contract IAIPresaleV2 is Ownable, ReentrancyGuard, Pausable {
         }
 
         addresses = new address[](size);
-        maxAmounts = new uint256[](size);
+        maxUSDTAmounts = new uint256[](size);
 
         for (uint256 i = 0; i < size; i++) {
             address account = whitelistedAddresses[offset + i];
             addresses[i] = account;
-            maxAmounts[i] = whitelistMaxAmount[account];
+            maxUSDTAmounts[i] = whitelistUSDTMaxAmount[account];
         }
 
-        return (addresses, maxAmounts, totalAddresses);
+        return (addresses, maxUSDTAmounts, totalAddresses);
     }
 
     function getTotalWhitelistedAddresses() external view returns (uint256) {

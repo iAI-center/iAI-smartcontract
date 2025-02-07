@@ -26,13 +26,17 @@ interface Input {
         endTime: number; // unix timestamp
         maxSaleAmount: string; // in ether
         minPurchase: string; // in ether
-        maxPurchase: string; // in ether
         revenueReceiver: string; // address to receive revenue
         isWhitelistEnabled: boolean; // enable whitelist
     };
     newOwner: string; // address of new owner to tranfer ownsership to
     generateNewWalletForTestUSDTHolder: boolean;
 }
+
+const gasSetup = {
+    maxFeePerGas: ethers.parseUnits("100", "gwei"),
+    maxPriorityFeePerGas: ethers.parseUnits("100", "gwei"),
+};
 
 const program = new Command("deploy-presale-v2")
     .description("deploy Presale (V2) related contracts")
@@ -56,6 +60,13 @@ const program = new Command("deploy-presale-v2")
 
     const [deployer] = await ethers.getSigners();
     console.log("deploying contracts with account:", deployer.address);
+
+    const provider = await ethers.provider;
+    const gasPrice = (await provider.getFeeData()).gasPrice;
+    console.log("gas price:", gasPrice!.toString());
+
+    const gasBalance = await provider.getBalance(deployer.address);
+    console.log("deployer's account balance:", ethers.formatEther(gasBalance));
 
     console.log("compiling ...");
     await hre.run("compile");
@@ -88,6 +99,7 @@ const program = new Command("deploy-presale-v2")
             );
         }
     } else {
+        console.log(`deploying IAIPresaleToken ...`);
         const IAIPresaleToken = await ethers.getContractFactory(
             "IAIPresaleToken"
         );
@@ -98,7 +110,10 @@ const program = new Command("deploy-presale-v2")
                 input.iaiToken.initialSupply,
                 input.iaiToken.decimal
             ),
-            input.iaiToken.decimal
+            input.iaiToken.decimal,
+            {
+                ...gasSetup,
+            }
         );
         await iaiToken.waitForDeployment();
         const tokenAddress = await iaiToken.getAddress();
@@ -177,7 +192,10 @@ const program = new Command("deploy-presale-v2")
         input.presale.endTime,
         ethers.parseEther(input.presale.maxSaleAmount),
         ethers.parseEther(input.presale.minPurchase),
-        input.presale.isWhitelistEnabled
+        input.presale.isWhitelistEnabled,
+        {
+            ...gasSetup,
+        }
     );
     await presale.waitForDeployment();
     const presaleAddress = await presale.getAddress();
@@ -186,7 +204,10 @@ const program = new Command("deploy-presale-v2")
 
     // transfer ownership to new owner if specified
     let transferOwnershipTx = "";
-    if (ethers.getAddress(input.newOwner) !== ethers.ZeroAddress) {
+    if (
+        input.newOwner.length > 0 &&
+        ethers.getAddress(input.newOwner) !== ethers.ZeroAddress
+    ) {
         console.log(`transferring ownership to: ${input.newOwner}`);
         const tx = await presale.transferOwnership(input.newOwner);
         const receipt = await tx.wait();
@@ -266,7 +287,7 @@ const program = new Command("deploy-presale-v2")
         [
             path.join(contractsPath, "IAIPresaleToken.sol"),
             path.join(contractsPath, "test", "MockERC20.sol"),
-            path.join(contractsPath, "IAIPresale.sol"),
+            path.join(contractsPath, "IAIPresaleV2.sol"),
         ].map((contractPath) =>
             cliHelper.flattenSolidity2File(
                 [contractPath],
@@ -274,5 +295,11 @@ const program = new Command("deploy-presale-v2")
                 path.basename(contractPath) + ".flatten.sol"
             )
         )
+    );
+
+    const afterDeployGasBalance = await provider.getBalance(deployer.address);
+    console.log(
+        "deployer's account balance (after deployment):",
+        ethers.formatEther(afterDeployGasBalance)
     );
 })();

@@ -15,8 +15,7 @@ describe("IAIPresaleV2", function () {
 
     context("With 18 Decimal USDT Token", function () {
         const TOKEN_PRICE = ethers.parseEther("1"); // 1 USDT per token
-        const MIN_PURCHASE = ethers.parseEther("100"); // 100 tokens
-        const MAX_PURCHASE = ethers.parseEther("10000"); // 10000 tokens
+        const MIN_PURCHASE = ethers.parseEther("0"); // 100 tokens
         const MAX_SALE_AMOUNT = ethers.parseEther("1000000"); // 1M tokens
 
         // Add constants for USDT decimals

@@ -31,6 +31,7 @@ contract IAIPresaleV2 is Ownable, ReentrancyGuard, Pausable {
     EnumerableSet.AddressSet private whitelistedAddresses;
 
     bool public isWhitelistEnabled = true; // New state variable
+    uint256 public defaultUSDTMaxAmount; // New variable for default max USDT amount
 
     // tracking user's spending USDT amounts
     mapping(address => uint256) public userTotalUSDTSpent;
@@ -72,7 +73,8 @@ contract IAIPresaleV2 is Ownable, ReentrancyGuard, Pausable {
         uint256 _endTime,
         uint256 _maxSaleAmount,
         uint256 _minPurchaseAmount,
-        bool _isWhitelistEnabled
+        bool _isWhitelistEnabled,
+        uint256 _defaultUSDTMaxAmount // Add new parameter
     ) Ownable(msg.sender) {
         require(
             _usdtToken != address(0) && _iaiPresaleToken != address(0),
@@ -94,6 +96,7 @@ contract IAIPresaleV2 is Ownable, ReentrancyGuard, Pausable {
         minPurchaseAmount = _minPurchaseAmount; // for example: 100 * 1e18 => 100 tokens minimum
 
         isWhitelistEnabled = _isWhitelistEnabled;
+        defaultUSDTMaxAmount = _defaultUSDTMaxAmount;
     }
 
     modifier isSaleActive() {
@@ -119,11 +122,15 @@ contract IAIPresaleV2 is Ownable, ReentrancyGuard, Pausable {
             "Below minimum purchase amount"
         );
 
-        uint256 maxUSDTAmount = whitelistUSDTMaxAmount[msg.sender];
-        if (isWhitelistEnabled && maxUSDTAmount > 0) {
-            // Check USDT spending limits instead of token amounts
+        // Updated spending limit handling:
+        uint256 userLimit = whitelistUSDTMaxAmount[msg.sender];
+        if (userLimit == 0) {
+            userLimit = defaultUSDTMaxAmount;
+        }
+        // If a spending limit is set (non-zero), enforce it
+        if (userLimit > 0) {
             require(
-                userTotalUSDTSpent[msg.sender] + usdtAmount <= maxUSDTAmount,
+                userTotalUSDTSpent[msg.sender] + usdtAmount <= userLimit,
                 "Exceeds total allowed USDT spending amount"
             );
         }
@@ -191,8 +198,9 @@ contract IAIPresaleV2 is Ownable, ReentrancyGuard, Pausable {
     }
 
     function setMaxSaleAmount(uint256 _maxSaleAmount) external onlyOwner {
+        // Updated: allow _maxSaleAmount to be equal to already sold tokens.
         require(
-            _maxSaleAmount > totalTokensSold,
+            _maxSaleAmount >= totalTokensSold,
             "Max sale amount cannot be less than already sold amount"
         );
         maxSaleAmount = _maxSaleAmount;
@@ -421,5 +429,12 @@ contract IAIPresaleV2 is Ownable, ReentrancyGuard, Pausable {
     function setWhitelistStatus(bool _status) external onlyOwner {
         isWhitelistEnabled = _status;
         emit WhitelistEnablingChanged(_status);
+    }
+
+    // Add function to update default max USDT amount
+    function setDefaultUSDTMaxAmount(
+        uint256 _defaultAmount
+    ) external onlyOwner {
+        defaultUSDTMaxAmount = _defaultAmount;
     }
 }

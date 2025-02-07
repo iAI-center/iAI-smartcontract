@@ -22,7 +22,8 @@
         "maxSaleAmount": "12500000.0",
         "minPurchase": "0.1",
         "revenueReceiver": "0x258c785f73E3e806deb3d9AE67AcD6eAe1983767",
-        "isWhitelistEnabled": true
+        "isWhitelistEnabled": true,
+        "defaultMaxUSDTPerUser": "1000000.0"
     },
     "newOwner": "",
     "generateNewWalletForTestUSDTHolder": false

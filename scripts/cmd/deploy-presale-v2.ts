@@ -28,15 +28,19 @@ interface Input {
         minPurchase: string; // in ether
         revenueReceiver: string; // address to receive revenue
         isWhitelistEnabled: boolean; // enable whitelist
+        defaultMaxUSDTPerUser: string; // in ether
     };
     newOwner: string; // address of new owner to tranfer ownsership to
     generateNewWalletForTestUSDTHolder: boolean;
 }
 
-const gasSetup = {
-    maxFeePerGas: ethers.parseUnits("100", "gwei"),
-    maxPriorityFeePerGas: ethers.parseUnits("100", "gwei"),
-};
+const USE_OVER_GAS_LIMIT = false;
+const gasSetup = USE_OVER_GAS_LIMIT
+    ? {
+          maxFeePerGas: ethers.parseUnits("100", "gwei"),
+          maxPriorityFeePerGas: ethers.parseUnits("100", "gwei"),
+      }
+    : {};
 
 const program = new Command("deploy-presale-v2")
     .description("deploy Presale (V2) related contracts")
@@ -193,6 +197,10 @@ const program = new Command("deploy-presale-v2")
         ethers.parseEther(input.presale.maxSaleAmount),
         ethers.parseEther(input.presale.minPurchase),
         input.presale.isWhitelistEnabled,
+        ethers.parseUnits(
+            input.presale.defaultMaxUSDTPerUser,
+            input.usdt.decimal
+        ),
         {
             ...gasSetup,
         }

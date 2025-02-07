@@ -17,6 +17,7 @@ describe("IAIPresaleV2", function () {
         const TOKEN_PRICE = ethers.parseEther("1"); // 1 USDT per token
         const MIN_PURCHASE = ethers.parseEther("0"); // 100 tokens
         const MAX_SALE_AMOUNT = ethers.parseEther("1000000"); // 1M tokens
+        const MAX_USDT_SPENDING_PER_USER = ethers.parseEther("1000000"); // 1M tokens
 
         // Add constants for USDT decimals
         const USDT_DECIMALS = 18;
@@ -63,7 +64,8 @@ describe("IAIPresaleV2", function () {
                 endTime,
                 MAX_SALE_AMOUNT,
                 MIN_PURCHASE,
-                isWhitelistEnabled
+                isWhitelistEnabled,
+                MAX_USDT_SPENDING_PER_USER
             );
 
             // Fund the presale contract with IAI tokens
@@ -390,10 +392,14 @@ describe("IAIPresaleV2", function () {
         // Add constants for USDT decimals
         const USDT_DECIMALS = 6;
         const SCALING_FACTOR = BigInt(10) ** BigInt(18 - USDT_DECIMALS);
-        const TOKEN_PRICE = ethers.parseEther("1"); // 1 USDT per token
+        const TOKEN_PRICE = ethers.parseUnits("1", USDT_DECIMALS); // 1 USDT per token
         const MIN_PURCHASE = ethers.parseUnits("0.1", USDT_DECIMALS); // 100 tokens
         const MAX_PURCHASE = ethers.parseUnits("10000", USDT_DECIMALS); // 10000 tokens
         const MAX_SALE_AMOUNT = ethers.parseEther("1000000"); // 1M tokens
+        const MAX_USDT_SPENDING_PER_USER = ethers.parseUnits(
+            "1000000",
+            USDT_DECIMALS
+        ); // 1M tokens
 
         beforeEach(async function () {
             [owner, buyer1, buyer2, revenueReceiver] =
@@ -436,7 +442,8 @@ describe("IAIPresaleV2", function () {
                 endTime,
                 MAX_SALE_AMOUNT,
                 MIN_PURCHASE,
-                isWhitelistEnabled
+                isWhitelistEnabled,
+                MAX_USDT_SPENDING_PER_USER
             );
 
             // Fund the presale contract with IAI tokens

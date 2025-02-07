@@ -26,11 +26,7 @@ contract IAIPresaleV2 is Ownable, ReentrancyGuard, Pausable {
     // wallet address who will receive the revenue from token selling
     address public revenueReceiver;
 
-    mapping(address => uint256) public userTotalPurchased;
-
     mapping(address => bool) public whitelisted;
-
-    mapping(address => uint256) public whitelistMaxAmount;
 
     EnumerableSet.AddressSet private whitelistedAddresses;
 

@@ -36,7 +36,7 @@ contract SmartChefFactory is Ownable {
     ) external onlyOwner {
         require(ERC20(_stakedToken).totalSupply() >= 0);
         require(ERC20(_rewardToken).totalSupply() >= 0);
-        require(_stakedToken != _rewardToken, "Tokens must be be different");
+        // require(_stakedToken != _rewardToken, "Tokens must be be different");
 
         // Calculate total rewards needed
         uint256 totalBlocks = _bonusEndBlock - _startBlock;

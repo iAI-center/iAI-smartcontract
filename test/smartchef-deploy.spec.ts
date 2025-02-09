@@ -31,7 +31,8 @@ const setupTestTokens = async (owner: Signer, user1: Signer) => {
 const setupSmartChef = async (
     stakedToken: IAIToken,
     rewardToken: IAIToken,
-    owner: Signer
+    owner: Signer,
+    poolLimitPerUser: bigint = ethers.parseEther("1000")
 ) => {
     const factory = await (
         await ethers.getContractFactory("SmartChefFactory")
@@ -43,7 +44,7 @@ const setupSmartChef = async (
         rewardPerBlock: ethers.parseEther("10"),
         startBlock: currentBlock + 10,
         bonusEndBlock: currentBlock + 1010,
-        poolLimitPerUser: ethers.parseEther("1000"),
+        poolLimitPerUser: poolLimitPerUser,
     };
 
     // Calculate total rewards needed
@@ -413,6 +414,156 @@ describe("SmartChef System Tests", function () {
                 const totalReward = userRewards.get(address) || 0n;
                 expect(totalReward).to.be.gte(0);
             }
+        });
+    });
+
+    describe("Same Token Staking/Reward Scenarios", () => {
+        let sameToken: IAIToken;
+        let sameTokenChef: SmartChefInitializable;
+        let sameTokenConfig: typeof config;
+
+        beforeEach(async function () {
+            // Deploy a single token to be used for both staking and rewards
+            const IAIToken = await ethers.getContractFactory("IAIToken");
+            sameToken = (await IAIToken.deploy(
+                await owner.getAddress(),
+                ethers.parseEther("2000000") // Double supply since it's used for both
+            )) as IAIToken;
+            await sameToken.waitForDeployment();
+
+            // Transfer some tokens to user1
+            await sameToken.transfer(
+                await user1.getAddress(),
+                ethers.parseEther("500000")
+            );
+
+            // Setup SmartChef with same token
+            const setup = await setupSmartChef(
+                sameToken,
+                sameToken,
+                owner,
+                ethers.parseEther("100000")
+            );
+            sameTokenChef = setup.chef;
+            sameTokenConfig = setup.config;
+        });
+
+        it("should track balances correctly when token is used for both stake and reward", async function () {
+            const stakeAmount = ethers.parseEther("100");
+            const initialBalance = await sameToken.balanceOf(
+                await owner.getAddress()
+            );
+
+            // Approve and deposit
+            await sameToken.approve(
+                await sameTokenChef.getAddress(),
+                stakeAmount
+            );
+            await sameTokenChef.deposit(stakeAmount);
+
+            // Verify initial state
+            expect(
+                await sameToken.balanceOf(await owner.getAddress())
+            ).to.equal(initialBalance - stakeAmount);
+
+            // Move to reward period and mine some blocks
+            await mine(
+                sameTokenConfig.startBlock -
+                    (await ethers.provider.getBlockNumber()) +
+                    50
+            );
+
+            // Check pending rewards
+            const pendingReward = await sameTokenChef.pendingReward(
+                await owner.getAddress()
+            );
+            expect(pendingReward).to.equal(ethers.parseEther("500")); // 10 reward per block * 50 blocks
+
+            // Withdraw half
+            const withdrawAmount = stakeAmount / 2n;
+            await sameTokenChef.withdraw(withdrawAmount);
+
+            // Verify balance includes both withdrawn stake and rewards
+            const finalBalance = await sameToken.balanceOf(
+                await owner.getAddress()
+            );
+            expect(finalBalance).to.be.gt(
+                initialBalance - stakeAmount + withdrawAmount
+            );
+        });
+
+        it("should handle compound farming efficiently with same token", async function () {
+            const stakeAmount = ethers.parseEther("100");
+            await sameToken.approve(
+                await sameTokenChef.getAddress(),
+                stakeAmount
+            );
+            await sameTokenChef.deposit(stakeAmount);
+
+            // Move to reward period
+            await mine(
+                sameTokenConfig.startBlock -
+                    (await ethers.provider.getBlockNumber()) +
+                    25
+            );
+
+            const balanceBefore = await sameToken.balanceOf(
+                await owner.getAddress()
+            );
+
+            // Harvest rewards by depositing 0
+            const pendingBefore = await sameTokenChef.pendingReward(
+                await owner.getAddress()
+            );
+            await sameTokenChef.deposit(0);
+
+            // Immediately stake harvested rewards
+            const newRewards =
+                (await sameToken.balanceOf(await owner.getAddress())) -
+                balanceBefore;
+            if (newRewards > 0n) {
+                await sameToken.approve(
+                    await sameTokenChef.getAddress(),
+                    newRewards
+                );
+                await sameTokenChef.deposit(newRewards);
+            }
+
+            const userInfo = await sameTokenChef.userInfo(
+                await owner.getAddress()
+            );
+            expect(userInfo.amount).to.be.gt(stakeAmount);
+        });
+
+        it("should correctly calculate APR when using same token", async function () {
+            const stakeAmount = ethers.parseEther("1000");
+            await sameToken.approve(
+                await sameTokenChef.getAddress(),
+                stakeAmount
+            );
+            await sameTokenChef.deposit(stakeAmount);
+
+            // Move to middle of reward period
+            const blocksToMine = Math.floor(
+                (sameTokenConfig.bonusEndBlock - sameTokenConfig.startBlock) / 2
+            );
+            await mine(
+                sameTokenConfig.startBlock -
+                    (await ethers.provider.getBlockNumber()) +
+                    blocksToMine
+            );
+
+            const pendingReward = await sameTokenChef.pendingReward(
+                await owner.getAddress()
+            );
+            const annualizedReward =
+                (pendingReward * 365n * 24n * 60n * 60n) /
+                BigInt(blocksToMine * 12); // assuming 12-second blocks
+            const apr = (annualizedReward * 10000n) / stakeAmount; // basis points
+
+            expect(apr).to.be.gt(0);
+            // Log APR for information
+            console.log(`APR (basis points): ${apr}`);
         });
     });
 

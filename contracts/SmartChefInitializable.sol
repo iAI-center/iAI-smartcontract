@@ -45,6 +45,9 @@ contract SmartChefInitializable is Ownable, ReentrancyGuard {
     // The staked token
     ERC20 public stakedToken;
 
+    // Total staked tokens
+    uint256 public totalStakedSupply;
+
     // Info of each user that stakes tokens (stakedToken)
     mapping(address => UserInfo) public userInfo;
 
@@ -148,6 +151,7 @@ contract SmartChefInitializable is Ownable, ReentrancyGuard {
 
         if (_amount > 0) {
             user.amount = user.amount + _amount;
+            totalStakedSupply = totalStakedSupply + _amount;
             stakedToken.transferFrom(msg.sender, address(this), _amount);
         }
 
@@ -171,6 +175,7 @@ contract SmartChefInitializable is Ownable, ReentrancyGuard {
 
         if (_amount > 0) {
             user.amount = user.amount - _amount;
+            totalStakedSupply = totalStakedSupply - _amount;
             stakedToken.transfer(address(msg.sender), _amount);
         }
 
@@ -190,6 +195,8 @@ contract SmartChefInitializable is Ownable, ReentrancyGuard {
     function emergencyWithdraw() external nonReentrant {
         UserInfo storage user = userInfo[msg.sender];
         uint256 amountToTransfer = user.amount;
+
+        totalStakedSupply = totalStakedSupply - user.amount;
         user.amount = 0;
         user.rewardDebt = 0;
 
@@ -312,12 +319,11 @@ contract SmartChefInitializable is Ownable, ReentrancyGuard {
      */
     function pendingReward(address _user) external view returns (uint256) {
         UserInfo storage user = userInfo[_user];
-        uint256 stakedTokenSupply = stakedToken.balanceOf(address(this));
-        if (block.number > lastRewardBlock && stakedTokenSupply != 0) {
+        if (block.number > lastRewardBlock && totalStakedSupply != 0) {
             uint256 multiplier = _getMultiplier(lastRewardBlock, block.number);
             uint256 cakeReward = multiplier * rewardPerBlock;
             uint256 adjustedTokenPerShare = accTokenPerShare +
-                ((cakeReward * PRECISION_FACTOR) / stakedTokenSupply);
+                ((cakeReward * PRECISION_FACTOR) / totalStakedSupply);
             return
                 ((user.amount * adjustedTokenPerShare) / PRECISION_FACTOR) -
                 user.rewardDebt;
@@ -336,9 +342,7 @@ contract SmartChefInitializable is Ownable, ReentrancyGuard {
             return;
         }
 
-        uint256 stakedTokenSupply = stakedToken.balanceOf(address(this));
-
-        if (stakedTokenSupply == 0) {
+        if (totalStakedSupply == 0) {
             lastRewardBlock = block.number;
             return;
         }
@@ -347,7 +351,7 @@ contract SmartChefInitializable is Ownable, ReentrancyGuard {
         uint256 cakeReward = multiplier * rewardPerBlock;
         accTokenPerShare =
             accTokenPerShare +
-            ((cakeReward * PRECISION_FACTOR) / stakedTokenSupply);
+            ((cakeReward * PRECISION_FACTOR) / totalStakedSupply);
         lastRewardBlock = block.number;
     }
 

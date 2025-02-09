@@ -1,0 +1,9 @@
+{
+    "stakedToken": "0xf1e9dec65b9418e69722a2bfb6b8d0bad8869356",
+    "rewardToken": "0xf1e9dec65b9418e69722a2bfb6b8d0bad8869356",
+    "rewardPerBlock": "0.1",
+    "startBlock": "17851750",
+    "bonusEndBlock": "27851750",
+    "poolLimitPerUser": "0",
+    "admin": "0x8ac5Ed65A272B0Ce945c379fb20466CA2b3BbE57"
+}

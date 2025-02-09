@@ -29,6 +29,7 @@ POLYGON_DEPLOY_PRESALE_INPUT_TESTNET := $(POLYGON_TESTNET_INPUT_DIR)/deploy-pres
 POLYGON_DEPLOY_PRESALE_INPUT_MAINNET := $(POLYGON_MAINNET_INPUT_DIR)/deploy-presale-private.json
 POLYGON_DEPLOY_PRESALE_V2_INPUT_TESTNET := $(POLYGON_TESTNET_INPUT_DIR)/deploy-presale-v2-private.json
 POLYGON_DEPLOY_PRESALE_V2_INPUT_MAINNET := $(POLYGON_MAINNET_INPUT_DIR)/deploy-presale-v2-private.json
+POLYGON_SMARTCHEF_INPUT_TESTNET := $(POLYGON_TESTNET_INPUT_DIR)/deploy-smartchef.json
 
 # Input file paths for Bsc network family
 BSC_DEPLOY_PRESALE_INPUT_TESTNET := $(BSC_TESTNET_INPUT_DIR)/deploy-presale-private.json
@@ -75,6 +76,10 @@ deploy-iai-presale-private-polygon-testnet:
 
 deploy-iai-presale-v2-private-polygon-testnet:
 	$(call run-contract-deployment,deploy-presale-v2,$(POLYGON_DEPLOY_PRESALE_V2_INPUT_TESTNET),$(POLYGON_TESTNET))
+	
+deploy-smartchef-polygon-testnet:
+	$(call run-contract-deployment,deploy-smartchef,$(POLYGON_SMARTCHEF_INPUT_TESTNET),$(POLYGON_TESTNET))
+
 
 ####################################################################################################
 ### Forking Polygon Testnet
@@ -101,6 +106,9 @@ deploy-iai-presale-private-forking-polygon-testnet:
 
 deploy-iai-presale-v2-private-forking-polygon-testnet:
 	$(call run-contract-deployment,deploy-presale-v2,$(POLYGON_DEPLOY_PRESALE_V2_INPUT_TESTNET),$(FORKING_POLYGON_TESTNET))
+
+deploy-smartchef-forking-polygon-testnet:
+	$(call run-contract-deployment,deploy-smartchef,$(POLYGON_SMARTCHEF_INPUT_TESTNET),$(FORKING_POLYGON_TESTNET))
 
 ####################################################################################################
 ### Polygon Mainnet

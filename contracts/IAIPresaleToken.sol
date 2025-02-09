@@ -2,8 +2,9 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract IAIPresaleToken is ERC20 {
+contract IAIPresaleToken is ERC20, Ownable {
     uint8 private _decimals;
 
     /// @notice Creates a new token with specified initial supply
@@ -17,7 +18,7 @@ contract IAIPresaleToken is ERC20 {
         string memory symbol,
         uint256 initialSupply,
         uint8 decimalsPlaces
-    ) ERC20(name, symbol) {
+    ) ERC20(name, symbol) Ownable(msg.sender) {
         require(decimalsPlaces > 0, "Decimals must be greater than 0");
         require(initialSupply > 0, "Initial supply must be greater than 0");
 
@@ -27,5 +28,12 @@ contract IAIPresaleToken is ERC20 {
 
     function decimals() public view virtual override returns (uint8) {
         return _decimals;
+    }
+
+    /// @notice Mints new tokens to the specified address
+    /// @param to The address that will receive the minted tokens
+    /// @param amount The amount of tokens to mint
+    function mint(address to, uint256 amount) public onlyOwner {
+        _mint(to, amount);
     }
 }

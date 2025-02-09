@@ -217,7 +217,9 @@ const program = new Command("deploy-presale-v2")
         ethers.getAddress(input.newOwner) !== ethers.ZeroAddress
     ) {
         console.log(`transferring ownership to: ${input.newOwner}`);
-        const tx = await presale.transferOwnership(input.newOwner);
+        const tx = await presale.transferOwnership(input.newOwner, {
+            ...gasSetup,
+        });
         const receipt = await tx.wait();
         console.log(`ownership transferred to: ${input.newOwner}`);
         console.log(`checking new ownership: ${await presale.owner()} ...done`);
@@ -241,7 +243,8 @@ const program = new Command("deploy-presale-v2")
                 .connect(deployer)
                 .transfer(
                     presaleAddress,
-                    ethers.parseEther(input.presale.maxSaleAmount)
+                    ethers.parseEther(input.presale.maxSaleAmount),
+                    { ...gasSetup }
                 );
             await tx.wait();
             console.log(

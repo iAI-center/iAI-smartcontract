@@ -1,13 +1,13 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import { time } from "@nomicfoundation/hardhat-toolbox/network-helpers";
-import { IAIPresaleV2, IERC20 } from "../typechain-types";
+import { IAIPresaleToken, IAIPresaleV2, IERC20 } from "../typechain-types";
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 
 describe("IAIPresaleV2", function () {
     let presale: IAIPresaleV2;
     let usdt: IERC20;
-    let iaiPresaleToken: IERC20;
+    let iaiPresaleToken: IAIPresaleToken;
     let owner: SignerWithAddress;
     let buyer1: SignerWithAddress;
     let buyer2: SignerWithAddress;
@@ -37,14 +37,17 @@ describe("IAIPresaleV2", function () {
                     BigInt(1_000_000_000) * BigInt(10) ** BigInt(USDT_DECIMALS)
                 )
             ).waitForDeployment()) as IERC20;
+            const IAIPresaleTokenFactory = await ethers.getContractFactory(
+                "IAIPresaleToken"
+            );
             iaiPresaleToken = (await (
-                await TokenFactory.deploy(
+                await IAIPresaleTokenFactory.deploy(
                     "IAI Token",
                     "IAI",
-                    18,
-                    ethers.parseEther("12500000")
+                    ethers.parseEther("12500000"),
+                    18
                 )
-            ).waitForDeployment()) as IERC20;
+            ).waitForDeployment()) as IAIPresaleToken;
 
             // Set up presale timing
             const startTime = (await time.latest()) + 3600; // Start in 1 hour
@@ -386,6 +389,78 @@ describe("IAIPresaleV2", function () {
                 );
             });
         });
+
+        describe("IAIPresaleToken Minting", function () {
+            let newOwner: SignerWithAddress;
+
+            beforeEach(async function () {
+                [owner, buyer1, buyer2, revenueReceiver, newOwner] =
+                    await ethers.getSigners();
+            });
+
+            it("Should allow owner to mint tokens", async function () {
+                const mintAmount = ethers.parseEther("1000");
+                const initialSupply = await iaiPresaleToken.totalSupply();
+
+                await expect(iaiPresaleToken.mint(owner.address, mintAmount))
+                    .to.emit(iaiPresaleToken, "Transfer")
+                    .withArgs(ethers.ZeroAddress, owner.address, mintAmount);
+
+                expect(await iaiPresaleToken.totalSupply()).to.equal(
+                    initialSupply + mintAmount
+                );
+                expect(await iaiPresaleToken.balanceOf(owner.address)).to.equal(
+                    await iaiPresaleToken.balanceOf(owner.address)
+                );
+            });
+
+            it("Should not allow non-owner to mint tokens", async function () {
+                const mintAmount = ethers.parseEther("1000");
+                await expect(
+                    iaiPresaleToken
+                        .connect(buyer1)
+                        .mint(buyer1.address, mintAmount)
+                ).to.be.revertedWithCustomError(
+                    iaiPresaleToken,
+                    "OwnableUnauthorizedAccount"
+                );
+            });
+
+            it("Should allow new owner to mint tokens after ownership transfer", async function () {
+                const mintAmount = ethers.parseEther("1000");
+
+                // Transfer ownership to new owner
+                await iaiPresaleToken.transferOwnership(newOwner.address);
+                expect(await iaiPresaleToken.owner()).to.equal(
+                    newOwner.address
+                );
+
+                // Old owner should not be able to mint
+                await expect(
+                    iaiPresaleToken.mint(owner.address, mintAmount)
+                ).to.be.revertedWithCustomError(
+                    iaiPresaleToken,
+                    "OwnableUnauthorizedAccount"
+                );
+
+                // New owner should be able to mint
+                const initialSupply = await iaiPresaleToken.totalSupply();
+                await expect(
+                    iaiPresaleToken
+                        .connect(newOwner)
+                        .mint(newOwner.address, mintAmount)
+                )
+                    .to.emit(iaiPresaleToken, "Transfer")
+                    .withArgs(ethers.ZeroAddress, newOwner.address, mintAmount);
+
+                expect(await iaiPresaleToken.totalSupply()).to.equal(
+                    initialSupply + mintAmount
+                );
+                expect(
+                    await iaiPresaleToken.balanceOf(newOwner.address)
+                ).to.equal(mintAmount);
+            });
+        });
     });
 
     context("With 6 Decimal USDT Handling", function () {
@@ -415,14 +490,17 @@ describe("IAIPresaleV2", function () {
                     BigInt(1_000_000_000) * BigInt(10) ** BigInt(USDT_DECIMALS)
                 )
             ).waitForDeployment()) as IERC20;
+            const IAIPresaleTokenFactory = await ethers.getContractFactory(
+                "IAIPresaleToken"
+            );
             iaiPresaleToken = (await (
-                await TokenFactory.deploy(
+                await IAIPresaleTokenFactory.deploy(
                     "IAI Token",
                     "IAI",
-                    18,
-                    ethers.parseEther("12500000")
+                    ethers.parseEther("12500000"),
+                    18
                 )
-            ).waitForDeployment()) as IERC20;
+            ).waitForDeployment()) as IAIPresaleToken;
 
             // Set up presale timing
             const startTime = (await time.latest()) + 3600; // Start in 1 hour

@@ -1,7 +1,7 @@
 {
     "iaiToken": {
-        "name": "IAI Presale Token",
-        "symbol": "IAI_PRESALE",
+        "name": "iAI Presale Token V2",
+        "symbol": "iAI Presale",
         "decimal": 18,
         "initialSupply": "12500000.0",
         "address": "",

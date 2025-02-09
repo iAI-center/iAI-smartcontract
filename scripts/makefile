@@ -28,12 +28,14 @@ POLYGON_ADD_FUNDS_INPUT := $(POLYGON_TESTNET_INPUT_DIR)/add-funds.json
 POLYGON_DEPLOY_PRESALE_INPUT_TESTNET := $(POLYGON_TESTNET_INPUT_DIR)/deploy-presale-private.json
 POLYGON_DEPLOY_PRESALE_INPUT_MAINNET := $(POLYGON_MAINNET_INPUT_DIR)/deploy-presale-private.json
 POLYGON_DEPLOY_PRESALE_V2_INPUT_TESTNET := $(POLYGON_TESTNET_INPUT_DIR)/deploy-presale-v2-private.json
+POLYGON_DEPLOY_PRESALE_V2_INPUT_MAINNET := $(POLYGON_MAINNET_INPUT_DIR)/deploy-presale-v2-private.json
 
 # Input file paths for Bsc network family
 BSC_DEPLOY_PRESALE_INPUT_TESTNET := $(BSC_TESTNET_INPUT_DIR)/deploy-presale-private.json
 BSC_DEPLOY_PRESALE_INPUT_MAINNET := $(BSC_MAINNET_INPUT_DIR)/deploy-presale-private.json
 
 BSC_DEPLOY_PRESALE_V2_INPUT_TESTNET := $(BSC_TESTNET_INPUT_DIR)/deploy-presale-v2-private.json
+BSC_DEPLOY_PRESALE_V2_INPUT_MAINNET := $(BSC_MAINNET_INPUT_DIR)/deploy-presale-v2-private.json
 
 # Task templates
 define run-script
@@ -107,12 +109,18 @@ deploy-iai-presale-v2-private-forking-polygon-testnet:
 deploy-iai-presale-private-polygon-mainnet:
 	$(call run-contract-deployment,deploy-presale,$(POLYGON_DEPLOY_PRESALE_INPUT_MAINNET),$(POLYGON_MAINNET))
 
+deploy-iai-presale-v2-private-polygon-mainnet:
+	$(call run-contract-deployment,deploy-presale-v2,$(POLYGON_DEPLOY_PRESALE_V2_INPUT_MAINNET),$(POLYGON_MAINNET))
+
 ####################################################################################################
 ### Forking Polygon Mainnet
 ####################################################################################################
 
 deploy-iai-presale-private-forking-polygon-mainnet:
 	$(call run-contract-deployment,deploy-presale,$(POLYGON_DEPLOY_PRESALE_INPUT_MAINNET),$(FORKING_POLYGON_MAINNET))
+
+deploy-iai-presale-v2-private-forking-polygon-mainnet:
+	$(call run-contract-deployment,deploy-presale-v2,$(POLYGON_DEPLOY_PRESALE_V2_INPUT_MAINNET),$(FORKING_POLYGON_MAINNET))
 
 
 ####################################################################################################
@@ -144,6 +152,9 @@ deploy-iai-presale-v2-private-forking-bsc-testnet:
 deploy-iai-presale-private-bsc-mainnet:
 	$(call run-contract-deployment,deploy-presale,$(BSC_DEPLOY_PRESALE_INPUT_MAINNET),$(BSC_MAINNET))
 
+deploy-iai-presale-v2-private-bsc-mainnet:
+	$(call run-contract-deployment,deploy-presale-v2,$(BSC_DEPLOY_PRESALE_V2_INPUT_MAINNET),$(BSC_MAINNET))
+
 
 ####################################################################################################
 ### Forking BSC MAINNET
@@ -151,3 +162,6 @@ deploy-iai-presale-private-bsc-mainnet:
 
 deploy-iai-presale-private-forking-bsc-mainnet:
 	$(call run-contract-deployment,deploy-presale,$(BSC_DEPLOY_PRESALE_INPUT_MAINNET),$(FORKING_BSC_MAINNET))
+
+deploy-iai-presale-v2-private-forking-bsc-mainnet:
+	$(call run-contract-deployment,deploy-presale-v2,$(BSC_DEPLOY_PRESALE_V2_INPUT_MAINNET),$(FORKING_BSC_MAINNET))

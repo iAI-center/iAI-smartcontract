@@ -3,28 +3,28 @@
         "name": "iAI Presale Token V2",
         "symbol": "iAI Presale",
         "decimal": 18,
-        "initialSupply": "25000000.0",
+        "initialSupply": "6500000.0",
         "address": "",
         "__note": "if an address is provided, the contract will use this address instead of deploying a new one, and it checks name, symbol and decimal must match the provided address"
     },
     "usdt": {
-        "name": "(PoS) Tether USD",
+        "name": "Tether USD",
         "symbol": "USDT",
-        "decimal": 6,
-        "address": "0x4E1610F4104e541B202eD8040a97e44245BB1Bd6",
+        "decimal": 18,
+        "address": "0x55d398326f99059fF775485246999027B3197955",
         "__note": "if an address is provided, the contract will use this address instead of deploying a new one, and it checks name, symbol and decimal must match the provided address"
     },
     "presale": {
-        "tokenPrice": "0.06",
-        "startTime": 1,
+        "tokenPrice": "0.078",
+        "startTime": 1739120400,
         "endTime": 2840140800,
         "__note__endTime": "Thu Jan 01 2060 00:00:00 GMT+0000 - this is far in the future",
-        "maxSaleAmount": "12500000.0",
+        "maxSaleAmount": "6500000.0",
         "minPurchase": "0.1",
-        "revenueReceiver": "0x258c785f73E3e806deb3d9AE67AcD6eAe1983767",
+        "revenueReceiver": "0x8b9166Fa2E958053dde91157C6338651e3f060ad",
         "isWhitelistEnabled": true,
         "defaultMaxUSDTPerUser": "1000000.0"
     },
-    "newOwner": "",
+    "newOwner": "0x01e118be20f9e347F91f333fE42Fd571964C3544",
     "generateNewWalletForTestUSDTHolder": false
 }

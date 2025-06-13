@@ -50,7 +50,7 @@ const program = new Command("deploy-smartchef")
     const input = JSON.parse(inputContent) as SmartChefInput;
 
     console.log(`changing network to: ${network} ...`);
-    await retry(() => hre.changeNetwork(network), "changeNetwork");
+    await retry(() => hre.switchNetwork(network), "changeNetwork");
     console.log(`changed network to: ${network} ...`);
     console.log(hre.config["networks"][network]);
 

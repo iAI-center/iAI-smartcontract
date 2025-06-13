@@ -4,11 +4,14 @@ pragma solidity 0.8.27;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 // import "bsc-library/contracts/ERC20.sol";
 // import "bsc-library/contracts/SafeBEP20.sol";
 
-contract SmartChefInitializable is Ownable, ReentrancyGuard {
+contract SmartChefInitializableV2 is Ownable, ReentrancyGuard {
+    using SafeERC20 for ERC20;
+
     // The address of the smart chef factory
     address public SMART_CHEF_FACTORY;
 
@@ -48,12 +51,16 @@ contract SmartChefInitializable is Ownable, ReentrancyGuard {
     // Total staked tokens
     uint256 public totalStakedSupply;
 
+    // Lock period in seconds (0 means no lock)
+    uint256 public lockPeriod;
+
     // Info of each user that stakes tokens (stakedToken)
     mapping(address => UserInfo) public userInfo;
 
     struct UserInfo {
         uint256 amount; // How many staked tokens the user has provided
         uint256 rewardDebt; // Reward debt
+        uint256 lastDepositTime; // Timestamp of last deposit
     }
 
     event AdminTokenRecovery(address tokenRecovered, uint256 amount);
@@ -77,6 +84,7 @@ contract SmartChefInitializable is Ownable, ReentrancyGuard {
      * @param _startBlock: start block
      * @param _bonusEndBlock: end block
      * @param _poolLimitPerUser: pool limit per user in stakedToken (if any, else 0)
+     * @param _lockPeriod: lock period in seconds (0 means no lock)
      * @param _admin: admin address with ownership
      */
     function initialize(
@@ -86,6 +94,7 @@ contract SmartChefInitializable is Ownable, ReentrancyGuard {
         uint256 _startBlock,
         uint256 _bonusEndBlock,
         uint256 _poolLimitPerUser,
+        uint256 _lockPeriod,
         address _admin
     ) external {
         require(!isInitialized, "Already initialized");
@@ -98,14 +107,6 @@ contract SmartChefInitializable is Ownable, ReentrancyGuard {
         require(
             _stakedToken != address(0) && _rewardToken != address(0),
             "Token addresses cannot be zero"
-        );
-
-        // Calculate and validate total rewards
-        uint256 totalBlocks = _bonusEndBlock - _startBlock;
-        uint256 totalRewardsNeeded = totalBlocks * _rewardPerBlock;
-        require(
-            ERC20(_rewardToken).balanceOf(address(this)) >= totalRewardsNeeded,
-            "Insufficient reward tokens provided"
         );
 
         // Calculate and validate total rewards
@@ -130,6 +131,9 @@ contract SmartChefInitializable is Ownable, ReentrancyGuard {
             poolLimitPerUser = _poolLimitPerUser;
         }
 
+        // Set lock period
+        lockPeriod = _lockPeriod;
+
         uint256 decimalsRewardToken = uint256(rewardToken.decimals());
         require(decimalsRewardToken < 30, "Must be inferior to 30");
 
@@ -144,9 +148,12 @@ contract SmartChefInitializable is Ownable, ReentrancyGuard {
 
     /*
      * @notice Deposit staked tokens and collect reward tokens (if any)
-     * @param _amount: amount to withdraw (in rewardToken)
-     */
-    function deposit(uint256 _amount) external nonReentrant {
+     * @param _amount: amount to deposit (in stakedToken)
+     * @note: differ from the original contract, this function checks if the pool is initialized and amount must be greater than 0.
+     * then user is not allowed to deposit with 0 amount for harvesting rewards anymore.
+     */ function deposit(uint256 _amount) external nonReentrant {
+        require(isInitialized, "Pool not initialized");
+        require(_amount > 0, "Amount must be greater than 0");
         UserInfo storage user = userInfo[msg.sender];
 
         if (hasUserLimit) {
@@ -161,15 +168,21 @@ contract SmartChefInitializable is Ownable, ReentrancyGuard {
         if (user.amount > 0) {
             uint256 pending = ((user.amount * accTokenPerShare) /
                 PRECISION_FACTOR) - user.rewardDebt;
-            if (pending > 0) {
-                rewardToken.transfer(msg.sender, pending);
+
+            // Only give rewards if lock period has passed since last deposit
+            bool canReceiveRewards = lockPeriod == 0 ||
+                block.timestamp >= user.lastDepositTime + lockPeriod;
+
+            if (pending > 0 && canReceiveRewards) {
+                rewardToken.safeTransfer(msg.sender, pending);
             }
         }
 
         if (_amount > 0) {
             user.amount = user.amount + _amount;
             totalStakedSupply = totalStakedSupply + _amount;
-            stakedToken.transferFrom(msg.sender, address(this), _amount);
+            user.lastDepositTime = block.timestamp; // Update lock timestamp
+            stakedToken.safeTransferFrom(msg.sender, address(this), _amount);
         }
 
         user.rewardDebt = (user.amount * accTokenPerShare) / PRECISION_FACTOR;
@@ -179,9 +192,10 @@ contract SmartChefInitializable is Ownable, ReentrancyGuard {
 
     /*
      * @notice Withdraw staked tokens and collect reward tokens
-     * @param _amount: amount to withdraw (in rewardToken)
+     * @param _amount: amount to withdraw (in stakedToken)
      */
     function withdraw(uint256 _amount) external nonReentrant {
+        require(isInitialized, "Pool not initialized");
         UserInfo storage user = userInfo[msg.sender];
         require(user.amount >= _amount, "Amount to withdraw too high");
 
@@ -190,14 +204,18 @@ contract SmartChefInitializable is Ownable, ReentrancyGuard {
         uint256 pending = ((user.amount * accTokenPerShare) /
             PRECISION_FACTOR) - user.rewardDebt;
 
+        // Only give rewards if lock period has passed
+        bool canReceiveRewards = lockPeriod == 0 ||
+            block.timestamp >= user.lastDepositTime + lockPeriod;
+
         if (_amount > 0) {
             user.amount = user.amount - _amount;
             totalStakedSupply = totalStakedSupply - _amount;
-            stakedToken.transfer(address(msg.sender), _amount);
+            stakedToken.safeTransfer(address(msg.sender), _amount);
         }
 
-        if (pending > 0) {
-            rewardToken.transfer(address(msg.sender), pending);
+        if (pending > 0 && canReceiveRewards) {
+            rewardToken.safeTransfer(address(msg.sender), pending);
         }
 
         user.rewardDebt = (user.amount * accTokenPerShare) / PRECISION_FACTOR;
@@ -218,10 +236,10 @@ contract SmartChefInitializable is Ownable, ReentrancyGuard {
         user.rewardDebt = 0;
 
         if (amountToTransfer > 0) {
-            stakedToken.transfer(msg.sender, amountToTransfer);
+            stakedToken.safeTransfer(msg.sender, amountToTransfer);
         }
 
-        emit EmergencyWithdraw(msg.sender, user.amount);
+        emit EmergencyWithdraw(msg.sender, amountToTransfer);
     }
 
     /*
@@ -229,7 +247,7 @@ contract SmartChefInitializable is Ownable, ReentrancyGuard {
      * @dev Only callable by owner. Needs to be for emergency.
      */
     function emergencyRewardWithdraw(uint256 _amount) external onlyOwner {
-        rewardToken.transfer(msg.sender, _amount);
+        rewardToken.safeTransfer(msg.sender, _amount);
     }
 
     /**
@@ -251,7 +269,7 @@ contract SmartChefInitializable is Ownable, ReentrancyGuard {
             "Cannot be reward token"
         );
 
-        ERC20(_tokenAddress).transfer(address(msg.sender), _tokenAmount);
+        ERC20(_tokenAddress).safeTransfer(address(msg.sender), _tokenAmount);
 
         emit AdminTokenRecovery(_tokenAddress, _tokenAmount);
     }
@@ -395,6 +413,31 @@ contract SmartChefInitializable is Ownable, ReentrancyGuard {
         address _user
     ) external view returns (uint256) {
         return userInfo[_user].amount;
+    }
+
+    // Add a view function to check if user's tokens are locked
+    function isUserLocked(address _user) external view returns (bool) {
+        if (lockPeriod == 0) return false;
+        UserInfo storage user = userInfo[_user];
+        return block.timestamp < user.lastDepositTime + lockPeriod;
+    }
+
+    // Add a view function to get user's unlock time
+    function getUserUnlockTime(address _user) external view returns (uint256) {
+        if (lockPeriod == 0) return 0;
+        UserInfo storage user = userInfo[_user];
+        return user.lastDepositTime + lockPeriod;
+    }
+
+    // Add a view function to get remaining lock time
+    function getRemainingLockTime(
+        address _user
+    ) external view returns (uint256) {
+        if (lockPeriod == 0) return 0;
+        UserInfo storage user = userInfo[_user];
+        uint256 unlockTime = user.lastDepositTime + lockPeriod;
+        if (block.timestamp >= unlockTime) return 0;
+        return unlockTime - block.timestamp;
     }
 
     // Add a view function to check if pool is active

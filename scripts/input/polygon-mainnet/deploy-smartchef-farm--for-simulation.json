@@ -1,0 +1,10 @@
+{
+    "stakedToken": "0x98130A8db97C45EA573d1E1103E4FE1A06c0789E",
+    "rewardToken": "0x98130A8db97C45EA573d1E1103E4FE1A06c0789E",
+    "rewardPerBlockInWei": "1046423135464231354",
+    "startBlock": "69073343",
+    "bonusEndBlock": "100609343",
+    "poolLimitPerUserInWei": "0",
+    "admin": "0x8ac5Ed65A272B0Ce945c379fb20466CA2b3BbE57",
+    "factoryAddress": "0x3daC087Cb34AD89d6F1FA0E16e86831a6B02586E"
+}

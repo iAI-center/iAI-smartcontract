@@ -31,7 +31,8 @@ const setupTestTokens = async (owner: Signer, user1: Signer) => {
 const setupSmartChef = async (
     stakedToken: IAIToken,
     rewardToken: IAIToken,
-    owner: Signer
+    owner: Signer,
+    poolLimitPerUser: bigint = ethers.parseEther("1000")
 ) => {
     const factory = await (
         await ethers.getContractFactory("SmartChefFactory")
@@ -43,7 +44,7 @@ const setupSmartChef = async (
         rewardPerBlock: ethers.parseEther("10"),
         startBlock: currentBlock + 10,
         bonusEndBlock: currentBlock + 1010,
-        poolLimitPerUser: ethers.parseEther("1000"),
+        poolLimitPerUser: poolLimitPerUser,
     };
 
     // Calculate total rewards needed
@@ -413,6 +414,327 @@ describe("SmartChef System Tests", function () {
                 const totalReward = userRewards.get(address) || 0n;
                 expect(totalReward).to.be.gte(0);
             }
+        });
+
+        it("should calculate rewards correctly for multiple users entering at different times", async function () {
+            const users = [owner, user1, user2, user3];
+            const deposits = [
+                ethers.parseEther("100"), // owner
+                ethers.parseEther("200"), // user1
+                ethers.parseEther("150"), // user2
+                ethers.parseEther("300"), // user3
+            ];
+
+            const debugOwnerPendingReward = async () => {
+                const headers: string[] = [];
+                const pendingRewards: string[] = [];
+                for (let i = 0; i < users.length; i++) {
+                    headers.push(`User ${i}`);
+                    const currentBlockNumber =
+                        await ethers.provider.getBlockNumber();
+                    const pendingReward = await chef.pendingReward(
+                        await users[i].getAddress()
+                    );
+                    pendingRewards.push(ethers.formatEther(pendingReward));
+                }
+
+                console.log(
+                    `>>> current block: ${await ethers.provider.getBlockNumber()}\t${pendingRewards.join(
+                        "\t"
+                    )}`
+                );
+            };
+
+            const mineAndDebugPendingReward = async (blocks: number) => {
+                for (let i = 0; i < blocks; i++) {
+                    await mine(1);
+                    await debugOwnerPendingReward();
+                }
+            };
+
+            // Move to start block
+            console.log(
+                `>>> current block: ${await ethers.provider.getBlockNumber()} moving to startBlock: ${
+                    config.startBlock
+                }`
+            );
+            await mine(
+                config.startBlock - (await ethers.provider.getBlockNumber())
+            );
+
+            // First user deposits
+            await stakedToken.approve(await chef.getAddress(), deposits[0]);
+            await chef.deposit(deposits[0]);
+            await debugOwnerPendingReward();
+
+            // Mine 10 blocks - only first user earns rewards
+            await mineAndDebugPendingReward(10);
+            await debugOwnerPendingReward();
+
+            // Second user deposits
+            await stakedToken
+                .connect(user1)
+                .approve(await chef.getAddress(), deposits[1]);
+            await chef.connect(user1).deposit(deposits[1]);
+
+            // Mine 15 blocks - first and second user earn rewards
+            await mineAndDebugPendingReward(15);
+            await debugOwnerPendingReward();
+
+            // Third user deposits
+            await stakedToken
+                .connect(user2)
+                .approve(await chef.getAddress(), deposits[2]);
+            await chef.connect(user2).deposit(deposits[2]);
+
+            // Mine 20 blocks - first three users earn rewards
+            await mineAndDebugPendingReward(20);
+            await debugOwnerPendingReward();
+
+            // Fourth user deposits
+            await stakedToken
+                .connect(user3)
+                .approve(await chef.getAddress(), deposits[3]);
+            await chef.connect(user3).deposit(deposits[3]);
+
+            // Mine 25 blocks - all users earn rewards
+            await mineAndDebugPendingReward(25);
+            await debugOwnerPendingReward();
+
+            // Calculate expected rewards for each period
+            // Period 1: 10 blocks, only owner
+            const period1Reward = config.rewardPerBlock * 10n;
+
+            // Period 2: 15 blocks, owner and user1
+            const period2Reward = config.rewardPerBlock * 15n;
+            const period2Owner =
+                (period2Reward * deposits[0]) / (deposits[0] + deposits[1]);
+            const period2User1 =
+                (period2Reward * deposits[1]) / (deposits[0] + deposits[1]);
+
+            // Period 3: 20 blocks, owner, user1, and user2
+            const period3Reward = config.rewardPerBlock * 20n;
+            const totalStake3 = deposits[0] + deposits[1] + deposits[2];
+            const period3Owner = (period3Reward * deposits[0]) / totalStake3;
+            const period3User1 = (period3Reward * deposits[1]) / totalStake3;
+            const period3User2 = (period3Reward * deposits[2]) / totalStake3;
+
+            // Period 4: 25 blocks, all users
+            const period4Reward = config.rewardPerBlock * 25n;
+            const totalStake4 =
+                deposits[0] + deposits[1] + deposits[2] + deposits[3];
+            const period4Owner = (period4Reward * deposits[0]) / totalStake4;
+            const period4User1 = (period4Reward * deposits[1]) / totalStake4;
+            const period4User2 = (period4Reward * deposits[2]) / totalStake4;
+            const period4User3 = (period4Reward * deposits[3]) / totalStake4;
+
+            // Calculate total expected rewards
+            const expectedRewards = [
+                period1Reward + period2Owner + period3Owner + period4Owner,
+                period2User1 + period3User1 + period4User1,
+                period3User2 + period4User2,
+                period4User3,
+            ];
+
+            console.log(`>>> owner pendingReward by period ...`);
+            console.log(`Period 1: ${ethers.formatEther(period1Reward)}`);
+            console.log(`Period 2: ${ethers.formatEther(period2Owner)}`);
+            console.log(`Period 3: ${ethers.formatEther(period3Owner)}`);
+            console.log(`Period 4: ${ethers.formatEther(period4Owner)}`);
+
+            console.log(
+                `>>> current block: ${await ethers.provider.getBlockNumber()}`
+            );
+            await debugOwnerPendingReward();
+
+            // Verify pending rewards
+            for (let i = 0; i < users.length; i++) {
+                const pendingReward = await chef.pendingReward(
+                    await users[i].getAddress()
+                );
+                console.log(
+                    `>>> user ${i} pending reward: ${pendingReward} expected: ${expectedRewards[i]}`
+                );
+                expect(pendingReward).to.be.closeTo(
+                    expectedRewards[i],
+                    ethers.parseEther("35"), // Allow for small rounding differences
+                    `User ${i} pending reward mismatch`
+                );
+            }
+
+            // Withdraw all stakes and verify received rewards
+            for (let i = 0; i < users.length; i++) {
+                const beforeBalance = await rewardToken.balanceOf(
+                    await users[i].getAddress()
+                );
+                await chef.connect(users[i]).withdraw(deposits[i]);
+                const afterBalance = await rewardToken.balanceOf(
+                    await users[i].getAddress()
+                );
+                const actualReward = afterBalance - beforeBalance;
+
+                expect(actualReward).to.be.closeTo(
+                    expectedRewards[i],
+                    ethers.parseEther("35"),
+                    `User ${i} received reward mismatch`
+                );
+
+                // Verify user's staked balance is now 0
+                const userInfo = await chef.userInfo(
+                    await users[i].getAddress()
+                );
+                expect(userInfo.amount).to.equal(0);
+            }
+        });
+    });
+
+    describe("Same Token Staking/Reward Scenarios", () => {
+        let sameToken: IAIToken;
+        let sameTokenChef: SmartChefInitializable;
+        let sameTokenConfig: typeof config;
+
+        beforeEach(async function () {
+            // Deploy a single token to be used for both staking and rewards
+            const IAIToken = await ethers.getContractFactory("IAIToken");
+            sameToken = (await IAIToken.deploy(
+                await owner.getAddress(),
+                ethers.parseEther("2000000") // Double supply since it's used for both
+            )) as IAIToken;
+            await sameToken.waitForDeployment();
+
+            // Transfer some tokens to user1
+            await sameToken.transfer(
+                await user1.getAddress(),
+                ethers.parseEther("500000")
+            );
+
+            // Setup SmartChef with same token
+            const setup = await setupSmartChef(
+                sameToken,
+                sameToken,
+                owner,
+                ethers.parseEther("100000")
+            );
+            sameTokenChef = setup.chef;
+            sameTokenConfig = setup.config;
+        });
+
+        it("should track balances correctly when token is used for both stake and reward", async function () {
+            const stakeAmount = ethers.parseEther("100");
+            const initialBalance = await sameToken.balanceOf(
+                await owner.getAddress()
+            );
+
+            // Approve and deposit
+            await sameToken.approve(
+                await sameTokenChef.getAddress(),
+                stakeAmount
+            );
+            await sameTokenChef.deposit(stakeAmount);
+
+            // Verify initial state
+            expect(
+                await sameToken.balanceOf(await owner.getAddress())
+            ).to.equal(initialBalance - stakeAmount);
+
+            // Move to reward period and mine some blocks
+            await mine(
+                sameTokenConfig.startBlock -
+                    (await ethers.provider.getBlockNumber()) +
+                    50
+            );
+
+            // Check pending rewards
+            const pendingReward = await sameTokenChef.pendingReward(
+                await owner.getAddress()
+            );
+            expect(pendingReward).to.equal(ethers.parseEther("500")); // 10 reward per block * 50 blocks
+
+            // Withdraw half
+            const withdrawAmount = stakeAmount / 2n;
+            await sameTokenChef.withdraw(withdrawAmount);
+
+            // Verify balance includes both withdrawn stake and rewards
+            const finalBalance = await sameToken.balanceOf(
+                await owner.getAddress()
+            );
+            expect(finalBalance).to.be.gt(
+                initialBalance - stakeAmount + withdrawAmount
+            );
+        });
+
+        it("should handle compound farming efficiently with same token", async function () {
+            const stakeAmount = ethers.parseEther("100");
+            await sameToken.approve(
+                await sameTokenChef.getAddress(),
+                stakeAmount
+            );
+            await sameTokenChef.deposit(stakeAmount);
+
+            // Move to reward period
+            await mine(
+                sameTokenConfig.startBlock -
+                    (await ethers.provider.getBlockNumber()) +
+                    25
+            );
+
+            const balanceBefore = await sameToken.balanceOf(
+                await owner.getAddress()
+            );
+
+            // Harvest rewards by depositing 0
+            const pendingBefore = await sameTokenChef.pendingReward(
+                await owner.getAddress()
+            );
+            await sameTokenChef.deposit(0);
+
+            // Immediately stake harvested rewards
+            const newRewards =
+                (await sameToken.balanceOf(await owner.getAddress())) -
+                balanceBefore;
+            if (newRewards > 0n) {
+                await sameToken.approve(
+                    await sameTokenChef.getAddress(),
+                    newRewards
+                );
+                await sameTokenChef.deposit(newRewards);
+            }
+
+            const userInfo = await sameTokenChef.userInfo(
+                await owner.getAddress()
+            );
+            expect(userInfo.amount).to.be.gt(stakeAmount);
+        });
+
+        it("should correctly calculate APR when using same token", async function () {
+            const stakeAmount = ethers.parseEther("1000");
+            await sameToken.approve(
+                await sameTokenChef.getAddress(),
+                stakeAmount
+            );
+            await sameTokenChef.deposit(stakeAmount);
+
+            // Move to middle of reward period
+            const blocksToMine = Math.floor(
+                (sameTokenConfig.bonusEndBlock - sameTokenConfig.startBlock) / 2
+            );
+            await mine(
+                sameTokenConfig.startBlock -
+                    (await ethers.provider.getBlockNumber()) +
+                    blocksToMine
+            );
+
+            const pendingReward = await sameTokenChef.pendingReward(
+                await owner.getAddress()
+            );
+            const annualizedReward =
+                (pendingReward * 365n * 24n * 60n * 60n) /
+                BigInt(blocksToMine * 12); // assuming 12-second blocks
+            const apr = (annualizedReward * 10000n) / stakeAmount; // basis points
+
+            expect(apr).to.be.gt(0);
+            // Log APR for information
+            console.log(`APR (basis points): ${apr}`);
         });
     });
 

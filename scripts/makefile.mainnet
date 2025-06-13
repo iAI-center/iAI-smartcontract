@@ -1,0 +1,55 @@
+#####################################################################
+## Forking node for Polygon Mainnet
+#####################################################################
+
+polygon-mainnet-forking--deploy-smartchef-factory:
+	npx ts-node --files cmd/smartchef/001-deploy-smartchef-factory.ts \
+		--input input/polygon-mainnet/deploy-smartchef-factory.json \
+		--network forkingPolygonMainnet \
+		--contracts ../contracts
+
+polygon-mainnet-forking--deploy-smartchef-farm--for-simulation:
+	npx ts-node --files cmd/smartchef/901-deploy-farm-mainnet.ts \
+		--input input/polygon-mainnet/deploy-smartchef-farm--for-simulation.json \
+		--network forkingPolygonMainnet \
+		--contracts ../contracts
+
+
+######################################################################
+## Polygon Mainnet
+######################################################################
+
+polygon-mainnet--deploy-smartchef-factory:
+	npx ts-node --files cmd/smartchef/001-deploy-smartchef-factory.ts \
+		--input input/polygon-mainnet/deploy-smartchef-factory.json \
+		--network polygonMainnet \
+		--contracts ../contracts
+
+polygon-mainnet--deploy-smartchef-farm:
+	npx ts-node --files cmd/smartchef/901-deploy-farm-mainnet.ts \
+		--input input/polygon-mainnet/deploy-smartchef-farm.json \
+		--network polygonMainnet \
+		--contracts ../contracts
+
+
+######################################################################
+## Polygon Mainnet - Simulation
+######################################################################
+
+polygon-mainnet--deploy-iai-token--for-simulation:
+	npx ts-node --files cmd/deploy-iai-token.ts \
+		--input input/polygon-mainnet/iai-token.json \
+		--network polygonMainnet \
+		--contracts ../contracts
+
+polygon-mainnet--deploy-smartchef-factory--for-simulation:
+	npx ts-node --files cmd/smartchef/001-deploy-smartchef-factory.ts \
+		--input input/polygon-mainnet/deploy-smartchef-factory--for-simulation.json \
+		--network polygonMainnet \
+		--contracts ../contracts
+
+polygon-mainnet--deploy-smartchef-farm--for-simulation:
+	npx ts-node --files cmd/smartchef/901-deploy-farm-mainnet.ts \
+		--input input/polygon-mainnet/deploy-smartchef-farm--for-simulation.json \
+		--network polygonMainnet \
+		--contracts ../contracts

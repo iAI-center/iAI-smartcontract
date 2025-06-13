@@ -8,10 +8,13 @@ POLYGON_MAINNET := polygonMainnet
 FORKING_POLYGON_MAINNET := forkingPolygonMainnet
 BSC_MAINNET := bscMainnet
 FORKING_BSC_MAINNET := forkingBscMainnet
+BASE_MAINNET := baseMainnet
+FORKING_BASE_MAINNET := forkingBaseMainnet
 
 # Input directory for Polygon network family
 POLYGON_TESTNET_INPUT_DIR := polygon-testnet
 POLYGON_MAINNET_INPUT_DIR := polygon-mainnet
+BASE_MAINNET_INPUT_DIR := base-mainnet
 
 # Input directory for Nsc network family
 BSC_TESTNET_INPUT_DIR := bsc-testnet
@@ -22,6 +25,7 @@ CONTRACTS_DIR := ../contracts
 
 # Input file paths for Polygon network family
 POLYGON_IAI_TOKEN_INPUT := $(POLYGON_TESTNET_INPUT_DIR)/iai-token.json
+POLYGON_IAI_TOKEN_INPUT_MAINNET := $(POLYGON_MAINNET_INPUT_DIR)/iai-token.json
 POLYGON_CALLHELPER_INPUT := $(POLYGON_TESTNET_INPUT_DIR)/callhelper.json
 POLYGON_REWARD_DIST_INPUT := $(POLYGON_TESTNET_INPUT_DIR)/reward-distributor.json
 POLYGON_ADD_FUNDS_INPUT := $(POLYGON_TESTNET_INPUT_DIR)/add-funds.json
@@ -38,11 +42,24 @@ BSC_DEPLOY_PRESALE_INPUT_MAINNET := $(BSC_MAINNET_INPUT_DIR)/deploy-presale-priv
 BSC_DEPLOY_PRESALE_V2_INPUT_TESTNET := $(BSC_TESTNET_INPUT_DIR)/deploy-presale-v2-private.json
 BSC_DEPLOY_PRESALE_V2_INPUT_MAINNET := $(BSC_MAINNET_INPUT_DIR)/deploy-presale-v2-private.json
 
+BASE_IAI_TOKEN_INPUT_MAINNET := $(BASE_MAINNET_INPUT_DIR)/iai-token.json
+
+
 # Task templates
+
+# run-script requires arguments
+# (1): script name
+# (2): input file name
+# (3): network name
+# (4): additional arguments (optional)
 define run-script
 npx ts-node --files ../scripts/cmd/$(1).ts --input ../scripts/input/$(2) --network $(3) $(4)
 endef
 
+# run-contract-deployment requires arguments
+# (1): script name
+# (2): input file name
+# (3): network name
 define run-contract-deployment
 $(call run-script,$(1),$(2),$(3),--contracts $(CONTRACTS_DIR))
 endef
@@ -120,6 +137,9 @@ deploy-iai-presale-private-polygon-mainnet:
 deploy-iai-presale-v2-private-polygon-mainnet:
 	$(call run-contract-deployment,deploy-presale-v2,$(POLYGON_DEPLOY_PRESALE_V2_INPUT_MAINNET),$(POLYGON_MAINNET))
 
+deploy-iai-token-polygon-mainnet:
+	$(call run-contract-deployment,deploy-iai-token,$(POLYGON_IAI_TOKEN_INPUT_MAINNET),$(POLYGON_MAINNET))
+
 ####################################################################################################
 ### Forking Polygon Mainnet
 ####################################################################################################
@@ -173,3 +193,26 @@ deploy-iai-presale-private-forking-bsc-mainnet:
 
 deploy-iai-presale-v2-private-forking-bsc-mainnet:
 	$(call run-contract-deployment,deploy-presale-v2,$(BSC_DEPLOY_PRESALE_V2_INPUT_MAINNET),$(FORKING_BSC_MAINNET))
+
+
+#####################################################################################################
+## just test
+#####################################################################################################
+
+calculate-farm-reward:
+	npx ts-node --files ../scripts/cmd/calculate-farm-deploy-parameter.ts
+
+
+####################################################################################################
+### Forking Base Mainnet
+####################################################################################################
+
+deploy-iai-token-forking-base-mainnet:
+	$(call run-contract-deployment,deploy-iai-token,$(BASE_IAI_TOKEN_INPUT_MAINNET),$(FORKING_BASE_MAINNET))
+
+####################################################################################################
+### Base Mainnet
+####################################################################################################
+
+deploy-iai-token-base-mainnet:
+	$(call run-contract-deployment,deploy-iai-token,$(BASE_IAI_TOKEN_INPUT_MAINNET),$(BASE_MAINNET))

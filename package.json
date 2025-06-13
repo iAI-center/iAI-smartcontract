@@ -17,6 +17,7 @@
         "dotenv": "^16.4.5",
         "ethers": "^6.4.0",
         "hardhat": "^2.22.14",
+        "hardhat-contract-sizer": "^2.10.0",
         "hardhat-gas-reporter": "^1.0.8",
         "prompts": "^2.4.2",
         "solidity-coverage": "^0.8.1",
@@ -26,6 +27,8 @@
     },
     "dependencies": {
         "@nomicfoundation/ignition-core": "^0.15.6",
-        "@openzeppelin/contracts": "^5.1.0"
+        "@openzeppelin/contracts": "^5.1.0",
+        "hardhat-switch-network": "^1.2.0",
+        "moment": "^2.30.1"
     }
 }

@@ -218,7 +218,7 @@ async function verifyDeployment(
     const { network, contracts: contractsPath } = program.opts();
 
     console.log(`Changing network to: ${network} ...`);
-    await hre.changeNetwork(network);
+    await hre.switchNetwork(network);
     console.log(`Changed network to: ${network}`);
 
     const [deployer] = await ethers.getSigners();

@@ -12,3 +12,6 @@ start-forking-node-polygon-mainnet:
 
 start-forking-node-bsc-mainnet:
 	$(DOTENV) -e .env.bsc-mainnet -- npx hardhat node
+
+start-forking-node-base-mainnet:
+	$(DOTENV) -e .env.base-mainnet -- npx hardhat node

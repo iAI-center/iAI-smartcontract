@@ -108,14 +108,6 @@ contract SmartChefInitializable is Ownable, ReentrancyGuard {
             "Insufficient reward tokens provided"
         );
 
-        // Calculate and validate total rewards
-        uint256 totalBlocks = _bonusEndBlock - _startBlock;
-        uint256 totalRewardsNeeded = totalBlocks * _rewardPerBlock;
-        require(
-            ERC20(_rewardToken).balanceOf(address(this)) >= totalRewardsNeeded,
-            "Insufficient reward tokens provided"
-        );
-
         // Make this contract initialized
         isInitialized = true;
 

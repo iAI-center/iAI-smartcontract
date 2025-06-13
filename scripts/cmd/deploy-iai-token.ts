@@ -26,15 +26,19 @@ const program = new Command("deploy-iai-token")
     const input = JSON.parse(inputContent) as Input;
 
     console.log(`changing network to: ${network} ...`);
-    await hre.changeNetwork(network);
+    await hre.switchNetwork(network);
     console.log(`changed network to: ${network} ...`);
     console.log(hre.config["networks"][network]);
 
     const [deployer] = await ethers.getSigners();
     console.log("deploying contract with the account:", deployer.address);
+    const accountBalance = await ethers.provider.getBalance(deployer.address);
     console.log(
         "account balance:",
-        (await ethers.provider.getBalance(deployer.address)).toString()
+        ethers.formatEther(accountBalance),
+        "(",
+        accountBalance.toString(),
+        ")"
     );
 
     console.log("compiling ...");

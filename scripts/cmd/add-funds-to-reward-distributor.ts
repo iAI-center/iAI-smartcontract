@@ -27,7 +27,7 @@ const program = new Command("add-funds-to-reward-distributor")
     const { distributor, token, amount } = JSON.parse(inputContent) as Input;
 
     console.log(`changing network to: ${network} ...`);
-    await hre.changeNetwork(network);
+    await hre.switchNetwork(network);
     console.log(`changed network to: ${network}`);
 
     const [signer] = await ethers.getSigners();

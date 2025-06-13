@@ -129,6 +129,14 @@ function writeOutputResult(
     console.log(`write result file ${resultFilePath} ...done`);
 }
 
+async function inputPrompt(msg: string) {
+    const response = await prompts({
+        type: "text",
+        name: "input",
+        message: msg,
+    });
+    return response.input as string;
+}
 /**
  *
  * @param {string} inputFilePath file path to input JSON
@@ -176,6 +184,16 @@ async function flattenSolidity2File(
     });
 }
 
+async function confirmNetworkChanedPromptMessage(network: string) {
+    const resp = await prompts({
+        type: "confirm",
+        name: "confirm",
+        message: "please confirm to change network to " + network,
+        initial: false,
+    });
+    return resp.confirm;
+}
+
 export default {
     confirmEnvConfig,
     confirmPromptMessage,
@@ -189,4 +207,8 @@ export default {
     saveInputToOutDir,
     JSONStringify,
     flattenSolidity2File,
+
+    confirmNetworkChanedPromptMessage,
+
+    inputPrompt,
 };

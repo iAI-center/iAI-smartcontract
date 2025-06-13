@@ -5,9 +5,9 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-import "./SmartChefInitializable.sol";
+import "./SmartChefInitializableV3.sol";
 
-contract SmartChefFactory is Ownable {
+contract SmartChefFactoryV3 is Ownable {
     event NewSmartChefContract(address indexed smartChef);
 
     constructor() Ownable(_msgSender()) {
@@ -32,6 +32,7 @@ contract SmartChefFactory is Ownable {
         uint256 _startBlock,
         uint256 _bonusEndBlock,
         uint256 _poolLimitPerUser,
+        uint256 _lockPeriod,
         address _admin
     ) external onlyOwner {
         require(ERC20(_stakedToken).totalSupply() >= 0);
@@ -52,7 +53,7 @@ contract SmartChefFactory is Ownable {
             "Failed to transfer rewards"
         );
 
-        bytes memory bytecode = type(SmartChefInitializable).creationCode;
+        bytes memory bytecode = type(SmartChefInitializableV3).creationCode;
         bytes32 salt = keccak256(
             abi.encodePacked(_stakedToken, _rewardToken, _startBlock)
         );
@@ -70,13 +71,14 @@ contract SmartChefFactory is Ownable {
         // Transfer rewards to the new pool before initialization
         IERC20(_rewardToken).transfer(smartChefAddress, totalRewardsNeeded);
 
-        SmartChefInitializable(smartChefAddress).initialize(
+        SmartChefInitializableV3(smartChefAddress).initialize(
             _stakedToken,
             _rewardToken,
             _rewardPerBlock,
             _startBlock,
             _bonusEndBlock,
             _poolLimitPerUser,
+            _lockPeriod,
             _admin
         );
 

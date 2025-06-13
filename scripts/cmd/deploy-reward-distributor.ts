@@ -26,7 +26,7 @@ const program = new Command("deploy-reward-distributor")
     const { rewardTokenAddress } = JSON.parse(inputContent) as Input;
 
     console.log(`changing network to: ${network} ...`);
-    await hre.changeNetwork(network);
+    await hre.switchNetwork(network);
     console.log(`changed network to: ${network} ...`);
     console.log(hre.config["networks"][network]);
 

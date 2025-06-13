@@ -11,7 +11,7 @@ contract IAIToken is ERC20, ERC20Burnable, Ownable, ERC20Permit {
     constructor(
         address initialOwner,
         uint256 initialSupply
-    ) ERC20("iAI Token", "iAI") Ownable(initialOwner) ERC20Permit("iAI Token") {
+    ) ERC20("iAI Token", "IAI") Ownable(initialOwner) ERC20Permit("iAI Token") {
         require(
             initialSupply > 0,
             "IAIToken: initial supply should be greater than 0"

@@ -1,0 +1,51 @@
+SmartChefV4 - DeFi Yield Farming Contract with Locking Mechanism
+
+OVERVIEW:
+SmartChefV4 enables users to stake tokens, withdraw funds, and earn rewards in a decentralized DeFi yield farming protocol, similar to SmartChefV1 but with a mandatory locking period mechanism.
+
+KEY FEATURES:
+1. Locking Period: Users must hold their deposits for a specified duration (e.g., 30 days) before earning rewards
+2. Reward Calculation: Rewards are calculated using rewardPerBlock × number of blocks passed since earning eligibility
+3. Reward Holding: During the locking period, earned rewards are held in the contract and not distributed
+
+CORE MECHANICS:
+
+LOCKING PERIOD RULES:
+- Users can deposit at any time, even during the locking period
+- Users are NOT allowed to withdraw during the locking period
+- No rewards are earned during the locking period; rewards are held in the contract
+- Any deposit action resets the locking period to the full duration
+- Locking period countdown starts from the block of the most recent deposit
+
+SCENARIOS (assuming 30-day lock period):
+
+1. ADDITIONAL DEPOSIT DURING LOCK PERIOD:
+   - Day 1: User deposits 100 tokens → Lock period: Day 1-30
+   - Day 15: User deposits 50 tokens → New balance: 150 tokens, Lock period reset: Day 15-45
+   - Rewards earned from Day 1-15: Held in contract (not claimable)
+   - Rewards from Day 15+: Calculated on 150 tokens (after lock expires)
+
+2. WITHDRAWAL DURING LOCK PERIOD:
+   - Users are NOT allowed to withdraw during the locking period
+
+3. REWARD CLAIMING AFTER LOCK EXPIRY:
+   - User can claim both:
+     a) Held rewards (accumulated during lock periods)
+     b) Current pending rewards (earned after lock expiry)
+
+4. WITHDRAWAL AFTER LOCK EXPIRY:
+   - Full withdrawal: User receives held rewards + pending rewards + total principal
+   - Partial withdrawal: User receives held rewards + pending rewards + (principal - withdrawn amount)
+
+5. ADDITIONAL DEPOSIT AFTER LOCK EXPIRY:
+   - User automatically receives held rewards + pending rewards
+   - New total deposit amount becomes the basis for future reward calculations
+   - New locking period begins
+
+TECHNICAL REQUIREMENTS:
+- Track individual user's held rewards separately from pending rewards
+- Implement block-based reward calculation
+- Reset locking period on deposit transactions only
+- Prevent withdrawals during the locking period
+- Maintain accurate reward accounting across multiple deposit/withdrawal cycles
+- Locking period can only be updated by owner before the start block is reached

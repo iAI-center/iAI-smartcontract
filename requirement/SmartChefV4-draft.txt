@@ -1,0 +1,20 @@
+SmartChefV4 allow user to stake, withdraw and earn rewards in a decentralized Defi yield farming just like SmartChefV1. But some mechanics are different.
+1. the contract specific how long user must hold the depositing called lockingPeriod for example 30 days.
+2. the reward is calculate using rewardPerBlock and number of block passed since the user deposit.
+3. within the locking period, user is allowed to deposit or withdraw but not allowed to earn the reward. 
+
+Scenario of depositing and withdrawal, by given lock period of 30 days:
+1. within the locking period, if user deposit more, for example
+    - if user make first deposit at the first day for 100 token.
+    - then user make another deposit at the 15th day for 50 token.
+    - once deposit, the user will not earn any reward for the first 15 days. but the reward was held in the contract.
+    - the new user's deposit amount is 150 token and the locking period is reset to 30 days which ends at the 45th day.
+    - then after the second deposit's block, the user will earn reward by using the new deposit amount for reward calculation.
+2. within the locking period, user is not allowed to withdraw
+4. after the end of locking period, if user has deposit amount and user choose to claim reward, user will earn both current pending reward and the held reward.
+5. after the end of locking period, if user has deposit amount and user choose to withdraw,
+    - fully withdrawal, user will earn both current pending reward and the held reward and total principal.
+    - partial withdrawal, user will earn both current pending reward and the held reward and total principal minus the withdrawn amount.
+6. after the end of locking period, if user make more deposit, 
+    - the user will earn both current pending reward and the held reward (if any).
+    - the new total deposit amount will be used for reward calculation.

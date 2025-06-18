@@ -39,6 +39,10 @@ const config: HardhatUserConfig = {
             "contracts/RewardDistributor.sol": SOLC_0_8_27_NO_OPTIMIZER,
             "contracts/IAIPresale.sol": SOLC_0_8_27_NO_OPTIMIZER,
             "contracts/IAIPresaleV2.sol": SOLC_0_8_27_NO_OPTIMIZER,
+            "contracts/VRFI.sol": SOLC_0_8_27_NO_OPTIMIZER,
+            "contracts/TokenMigrater.sol": SOLC_0_8_27_NO_OPTIMIZER,
+            "contracts/SmartChefFactoryV4.sol": SOLC_0_8_27_NO_OPTIMIZER,
+            "contracts/SmartChefInitializableV4.sol": SOLC_0_8_27_NO_OPTIMIZER,
         },
     },
     networks: {
@@ -47,7 +51,6 @@ const config: HardhatUserConfig = {
             ...networkPolygonTestnet,
         },
         forkingPolygonTestnet: {
-            ...networkPolygonTestnet,
             url: "http://127.0.0.1:8545",
         } as HardhatNetworkUserConfig,
         bscTestnet: {

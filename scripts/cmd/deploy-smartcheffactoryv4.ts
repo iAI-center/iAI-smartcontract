@@ -21,17 +21,13 @@ async function main() {
     console.log("Deploying contracts with the account:", deployer.address);
     console.log(
         "Account balance:",
-        (await ethers.provider.getBalance(deployer.address)).toString()
+        ethers.formatEther(await ethers.provider.getBalance(deployer.address))
     );
-
-    // Contract addresses for different networks
-    let IAI_TOKEN_ADDRESS = "0x..."; // Replace with actual IAI token address
-    let REWARD_TOKEN_ADDRESS = "0x..."; // Replace with actual reward token address (can be same as IAI)
 
     // Farm configuration parameters - these can be adjusted as needed
     let FARM_CONFIG = {
-        stakedToken: IAI_TOKEN_ADDRESS, // IAI Token for staking
-        rewardToken: REWARD_TOKEN_ADDRESS, // Reward token (can be same as IAI or different)
+        stakedToken: ethers.ZeroAddress, // IAI Token for staking
+        rewardToken: ethers.ZeroAddress, // Reward token (can be same as IAI or different)
         rewardPerBlock: ethers.parseEther("1"), // 1 token per block - ADJUST AS NEEDED
         startBlock: 0n, // Will be set to current block + delay
         endBlock: 0n, // Will be set to startBlock + duration
@@ -41,13 +37,14 @@ async function main() {
         blockDuration: 201600n, // ~30 days (assuming 13s per block) - ADJUST AS NEEDED
         blockDelay: 100n, // Start in 100 blocks - ADJUST AS NEEDED
     };
+    let totalRewardsNeeded = 0n;
 
     if (
         targetNetwork === SupportNetworks.polygonMainnet ||
         targetNetwork === SupportNetworks.forkingPolygonMainnet
     ) {
-        IAI_TOKEN_ADDRESS = ""; // Replace with mainnet IAI token address
-        REWARD_TOKEN_ADDRESS = ""; // Replace with mainnet reward token address
+        const IAI_TOKEN_ADDRESS = ethers.ZeroAddress; // Replace with mainnet IAI token address
+        const REWARD_TOKEN_ADDRESS = ethers.ZeroAddress; // Replace with mainnet reward token address
         FARM_CONFIG = {
             stakedToken: IAI_TOKEN_ADDRESS,
             rewardToken: REWARD_TOKEN_ADDRESS,
@@ -58,8 +55,12 @@ async function main() {
             lockPeriod: 0n, // No lock period by default
             admin: deployer.address, // Admin address
             blockDuration: 201600n, // ~30 days (assuming 13s per block)
-            blockDelay: 100n, // Start in 100 blocks
+            blockDelay: 1000n, // Start in 1000 blocks
         };
+
+        const totalBlocks = FARM_CONFIG.endBlock - FARM_CONFIG.startBlock;
+        totalRewardsNeeded = totalBlocks * FARM_CONFIG.rewardPerBlock;
+
         throw new Error(
             "Mainnet deployment is not supported yet. Please use testnet or forked networks for testing."
         );
@@ -67,8 +68,10 @@ async function main() {
         targetNetwork === SupportNetworks.polygonTestnet ||
         targetNetwork === SupportNetworks.forkingPolygonTestnet
     ) {
-        IAI_TOKEN_ADDRESS = ""; // Replace with testnet IAI token address
-        REWARD_TOKEN_ADDRESS = ""; // Replace with testnet reward token address
+        const IAI_TOKEN_ADDRESS = "0x1b8cbfbdeab06e6e5a3df577beb801ee16ad8c22"; // Replace with testnet IAI token address
+        const REWARD_TOKEN_ADDRESS =
+            "0x1b8cbfbdeab06e6e5a3df577beb801ee16ad8c22"; // Replace with testnet reward token address
+
         FARM_CONFIG = {
             stakedToken: IAI_TOKEN_ADDRESS,
             rewardToken: REWARD_TOKEN_ADDRESS,
@@ -76,15 +79,97 @@ async function main() {
             startBlock: 0n, // Will be set later
             endBlock: 0n, // Will be set later
             poolLimitPerUser: ethers.parseEther("0"), // No limit by default
-            lockPeriod: BigInt(Math.floor((30 * 24 * 60 * 60) / 1.23)), // 30 days
+            lockPeriod: BigInt(
+                Math.floor((30 * 24 * 60 * 60) / polygonBlockTime)
+            ), // 30 days
             admin: deployer.address, // Admin address
-            blockDuration: BigInt(Math.floor((100 * 24 * 60 * 60) / 1.23)), // ~100 days
+            blockDuration: BigInt(
+                Math.floor((30 * 24 * 60 * 60) / polygonBlockTime)
+            ), // ~30 days
             blockDelay: 100n, // Start in 100 blocks
         };
+
+        const currentBlock = await ethers.provider.getBlockNumber();
+        FARM_CONFIG.startBlock = BigInt(currentBlock) + FARM_CONFIG.blockDelay;
+        FARM_CONFIG.endBlock =
+            FARM_CONFIG.startBlock + FARM_CONFIG.blockDuration;
+
+        const totalBlocks = FARM_CONFIG.endBlock - FARM_CONFIG.startBlock;
+        totalRewardsNeeded = totalBlocks * FARM_CONFIG.rewardPerBlock;
+    }
+
+    if (
+        FARM_CONFIG.stakedToken === ethers.ZeroAddress ||
+        FARM_CONFIG.rewardToken === ethers.ZeroAddress
+    ) {
+        throw new Error(
+            "Please set the IAI_TOKEN_ADDRESS and REWARD_TOKEN_ADDRESS for mainnet deployment."
+        );
+    }
+    if (
+        FARM_CONFIG.startBlock <
+        BigInt(await ethers.provider.getBlockNumber()) + FARM_CONFIG.blockDelay
+    ) {
+        console.warn(
+            "Warning: Start block is set to less than 5000 blocks from now. This may cause issues with farm deployment."
+        );
+    }
+    if (FARM_CONFIG.endBlock <= FARM_CONFIG.startBlock) {
+        throw new Error(
+            "End block must be greater than start block. Please adjust the farm configuration."
+        );
+    }
+
+    console.log(
+        `Total rewards needed for the farm: ${ethers.formatEther(
+            totalRewardsNeeded
+        )} tokens`
+    );
+    console.log(`checking reward token balance for ${FARM_CONFIG.admin}...`);
+    {
+        const rewardToken = await ethers.getContractAt(
+            "IERC20",
+            FARM_CONFIG.rewardToken
+        );
+        const rewardTokenBalance = await rewardToken.balanceOf(
+            FARM_CONFIG.admin
+        );
+
+        if (rewardTokenBalance < totalRewardsNeeded) {
+            console.error(
+                `Insufficient reward token balance for ${
+                    FARM_CONFIG.admin
+                }. Required: ${ethers.formatEther(
+                    totalRewardsNeeded
+                )}, Available: ${ethers.formatEther(rewardTokenBalance)}`
+            );
+            console.log(
+                "\nPlease ensure the admin wallet has enough reward tokens before deploying a farm."
+            );
+        }
+    }
+
+    {
+        const confirmed = await cliHelper.confirmPromptMessage(
+            "Please confirm the farm configuration is correct before proceeding with deployment."
+        );
+        if (!confirmed) {
+            console.log("Farm deployment aborted by user.");
+            return;
+        }
     }
 
     // Deploy SmartChefFactoryV4
     console.log("Deploying SmartChefFactoryV4...");
+    {
+        const confirmed = await cliHelper.confirmPromptMessage(
+            "This will deploy the SmartChefFactoryV4 contract. Please confirm to proceed."
+        );
+        if (!confirmed) {
+            console.log("SmartChefFactoryV4 deployment aborted by user.");
+            return;
+        }
+    }
     const SmartChefFactoryV4 = await ethers.getContractFactory(
         "SmartChefFactoryV4"
     );
@@ -96,14 +181,9 @@ async function main() {
     console.log("SmartChefFactoryV4 deployed to:", factoryAddress);
     console.log("Contract owner:", await factoryV4.owner());
 
-    // Calculate start and end blocks
-    const currentBlock = await ethers.provider.getBlockNumber();
-    FARM_CONFIG.startBlock = BigInt(currentBlock) + FARM_CONFIG.blockDelay;
-    FARM_CONFIG.endBlock = FARM_CONFIG.startBlock + FARM_CONFIG.blockDuration;
-
     // Calculate total rewards needed
     const totalBlocks = FARM_CONFIG.endBlock - FARM_CONFIG.startBlock;
-    const totalRewardsNeeded = totalBlocks * FARM_CONFIG.rewardPerBlock;
+    totalRewardsNeeded = totalBlocks * FARM_CONFIG.rewardPerBlock;
 
     console.log("\n=== Farm Configuration ===");
     console.log("Staked Token (IAI):", FARM_CONFIG.stakedToken);
@@ -148,6 +228,24 @@ async function main() {
         return;
     }
 
+    console.log(`approving factory to spend reward tokens...`);
+    {
+        const rewardToken = await ethers.getContractAt(
+            "IERC20",
+            FARM_CONFIG.rewardToken
+        );
+        const approvalTx = await rewardToken.approve(
+            factoryAddress,
+            totalRewardsNeeded
+        );
+        await approvalTx.wait();
+        console.log(
+            `Factory approved to spend ${ethers.formatEther(
+                totalRewardsNeeded
+            )} reward tokens from ${FARM_CONFIG.admin}`
+        );
+    }
+
     // Confirm farm deployment
     const confirmed = await cliHelper.confirmPromptMessage(
         "Please confirm the farm configuration is correct before proceeding with farm deployment."
@@ -163,6 +261,37 @@ async function main() {
     console.log(
         "Note: Make sure you have approved the factory to spend reward tokens!"
     );
+
+    let deployedAddress: string = "";
+    let deployedTxHash: string = "";
+
+    try {
+        // make static call to pre-check deployPool calling
+        console.log("Pre-checking farm deployment with static call...");
+        await factoryV4["deployPool"].staticCall(
+            FARM_CONFIG.stakedToken,
+            FARM_CONFIG.rewardToken,
+            FARM_CONFIG.rewardPerBlock,
+            FARM_CONFIG.startBlock,
+            FARM_CONFIG.endBlock,
+            FARM_CONFIG.poolLimitPerUser,
+            FARM_CONFIG.lockPeriod,
+            FARM_CONFIG.admin
+        );
+    } catch (error) {
+        console.error("Static call failed:", error);
+        console.log(
+            "\nPossible reasons for static call failure:\n1. Insufficient reward token allowance for the factory\n2. Insufficient reward token balance\n3. Invalid token addresses\n4. Gas limit exceeded"
+        );
+        console.log(
+            "SmartChefFactoryV4 has been deployed successfully to:",
+            factoryAddress
+        );
+        console.log(
+            "You can manually deploy a farm later using the factory contract."
+        );
+        return;
+    }
 
     try {
         // Deploy the farm through the factory
@@ -222,6 +351,9 @@ async function main() {
                 (await farm.lockingPeriod()).toString()
             );
             console.log("Owner:", await farm.owner());
+
+            deployedAddress = await farm.getAddress();
+            deployedTxHash = tx.hash;
         }
 
         console.log("\n📝 Next steps:");
@@ -247,6 +379,28 @@ async function main() {
             "You can manually deploy a farm later using the factory contract."
         );
     }
+
+    // make output dir ...
+    const outDir = cliHelper.ensureCommandOutputDirExists("deploy-smartchefv4");
+
+    // write output result ...
+    cliHelper.writeOutputResult(
+        {
+            address: deployedAddress,
+            txHash: deployedTxHash,
+        },
+        outDir,
+        "result.json"
+    );
+
+    // flatten sol file to output dir ...
+    console.log("flattening sol file...");
+    await cliHelper.flattenSolidity2File(
+        ["../../contracts/SmartChefInitializableV4.sol"],
+        outDir,
+        "SmartChefInitializableV4.flatten.sol"
+    );
+    console.log("flattened sol file... done");
 }
 
 main()

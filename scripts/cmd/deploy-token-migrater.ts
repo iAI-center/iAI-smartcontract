@@ -37,27 +37,50 @@ async function main() {
         targetNetwork === SupportNetworks.polygonTestnet ||
         targetNetwork === SupportNetworks.forkingPolygonTestnet
     ) {
-        SOURCE_TOKEN_ADDRESS = "";
-        TARGET_TOKEN_ADDRESS = "";
-        TREASURY_WALLET = "";
+        SOURCE_TOKEN_ADDRESS = "0x1b8cbfbdeab06e6e5a3df577beb801ee16ad8c22"; // old IAI token address
+        TARGET_TOKEN_ADDRESS = "0x438Ae65CD7CF1cE33279A4De4aB3281b14bdB3B4"; // new VRFI token address
+        TREASURY_WALLET = deployer.address; // admin/deployer wallet address
     }
 
     {
         console.log("Source Token:", SOURCE_TOKEN_ADDRESS);
         console.log("Target Token:", TARGET_TOKEN_ADDRESS);
         console.log("Treasury Wallet:", TREASURY_WALLET);
-        const confirmed = await cliHelper.confirmPromptMessage(
-            "Please confirm the addresses are correct before proceeding."
-        );
-        if (!confirmed) {
-            console.log("Deployment aborted by user.");
-            process.exit(1);
-        }
         console.log(`--------------------------------------------------`);
     }
 
     // Migration parameters
-    const DEFAULT_MIGRATION_LIMIT = ethers.parseEther("10000000000"); //  10 billion tokens
+    const DEFAULT_MIGRATION_LIMIT = ethers.parseEther("10000000000"); //  10 billion tokens (like no limit)
+
+    console.log(`prechecking ...`);
+    const sourceToken = await ethers.getContractAt(
+        "ERC20",
+        SOURCE_TOKEN_ADDRESS
+    );
+    const targetToken = await ethers.getContractAt(
+        "ERC20",
+        TARGET_TOKEN_ADDRESS
+    );
+    const sourceTokenName = await sourceToken.name();
+    const sourceTokenSymbol = await sourceToken.symbol();
+    const sourceTokenDecimals = await sourceToken.decimals();
+    const targetTokenName = await targetToken.name();
+    const targetTokenSymbol = await targetToken.symbol();
+    const targetTokenDecimals = await targetToken.decimals();
+    console.log(
+        `Source Token: ${sourceTokenName} (${sourceTokenSymbol}) - Decimals: ${sourceTokenDecimals}`
+    );
+    console.log(
+        `Target Token: ${targetTokenName} (${targetTokenSymbol}) - Decimals: ${targetTokenDecimals}`
+    );
+    console.log(`--------------------------------------------------`);
+    const confirmed = await cliHelper.confirmPromptMessage(
+        "Please confirm the addresses are correct before proceeding."
+    );
+    if (!confirmed) {
+        console.log("Deployment aborted by user.");
+        process.exit(1);
+    }
 
     // Deploy TokenMigrater
     const TokenMigrater = await ethers.getContractFactory("TokenMigrater");

@@ -87,7 +87,12 @@ function ensureCommandOutputDirExists(
     if (parentFolderPath && Array.isArray(parentFolderPath)) {
         dirPath = path.join(dirPath, ...parentFolderPath);
     }
-    dirPath = path.join(dirPath, cmdName, `${+new Date()}-${hre.network.name}`);
+    dirPath = path.join(
+        dirPath,
+        cmdName,
+        `${hre.network.name}`,
+        `${+new Date()}`
+    );
 
     // make sure out dir exists
     const exists = fs.existsSync(dirPath);
@@ -96,7 +101,7 @@ function ensureCommandOutputDirExists(
             fs.mkdirSync(dirPath, { recursive: true });
         } catch (err) {
             console.error("failed to make dir:", dirPath, "due to error:", err);
-            return;
+            throw new Error("failed to create output directory");
         }
     }
     console.log("created directory:", dirPath);

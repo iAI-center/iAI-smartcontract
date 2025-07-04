@@ -24,6 +24,14 @@ const config: HardhatUserConfig = {
                 url: process.env.FORKING_RPC_URL!,
             },
             chainId: parseInt(process.env.FORKING_CHAIN_ID!),
+            chains: {
+                80002: {
+                    hardforkHistory: {
+                        berlin: 1000000,
+                        london: 2000000,
+                    },
+                },
+            },
             from: process.env.WALLET_ADDRESS,
             accounts: [
                 ...(process.env.PRIVATE_KEY

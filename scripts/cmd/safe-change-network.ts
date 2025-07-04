@@ -9,6 +9,10 @@ export enum SupportNetworks {
     forkingPolygonTestnet = "forkingPolygonTestnet",
     polygonMainnet = "polygonMainnet",
     polygonTestnet = "polygonTestnet",
+    bscMainnet = "bscMainnet",
+    bscTestnet = "bscTestnet",
+    forkingBscMainnet = "forkingBscMainnet",
+    forkingBscTestnet = "forkingBscTestnet",
 }
 
 const requiredPinNetworks: SupportNetworks[] = [
@@ -16,6 +20,7 @@ const requiredPinNetworks: SupportNetworks[] = [
     // SupportNetworks.ethereumMainnet,
     SupportNetworks.polygonMainnet,
     SupportNetworks.baseMainnet,
+    SupportNetworks.bscMainnet,
 ];
 
 export async function safeChangeNetwork(n: SupportNetworks) {

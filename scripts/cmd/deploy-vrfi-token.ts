@@ -17,6 +17,10 @@ async function main(): Promise<void> {
         SupportNetworks.polygonTestnet,
         SupportNetworks.forkingPolygonMainnet,
         SupportNetworks.forkingPolygonTestnet,
+        SupportNetworks.bscMainnet,
+        SupportNetworks.bscTestnet,
+        SupportNetworks.forkingBscMainnet,
+        SupportNetworks.forkingBscTestnet,
     ]);
     if (!targetNetwork) {
         console.error("No network selected. Exiting...");

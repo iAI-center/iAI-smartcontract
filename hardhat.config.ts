@@ -43,6 +43,8 @@ const config: HardhatUserConfig = {
             "contracts/TokenMigrater.sol": SOLC_0_8_27_NO_OPTIMIZER,
             "contracts/SmartChefFactoryV4.sol": SOLC_0_8_27_NO_OPTIMIZER,
             "contracts/SmartChefInitializableV4.sol": SOLC_0_8_27_NO_OPTIMIZER,
+            "contracts/VRFIPresale.sol": SOLC_0_8_27_NO_OPTIMIZER,
+            "contracts/VRFIPresaleToken.sol": SOLC_0_8_27_NO_OPTIMIZER,
         },
     },
     networks: {

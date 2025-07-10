@@ -12,6 +12,10 @@ async function main() {
         SupportNetworks.polygonTestnet,
         SupportNetworks.forkingPolygonMainnet,
         SupportNetworks.forkingPolygonTestnet,
+        SupportNetworks.bscMainnet,
+        SupportNetworks.bscTestnet,
+        SupportNetworks.forkingBscMainnet,
+        SupportNetworks.forkingBscTestnet,
     ]);
 
     const [deployer] = await ethers.getSigners();
@@ -39,6 +43,20 @@ async function main() {
     ) {
         SOURCE_TOKEN_ADDRESS = "0x1b8cbfbdeab06e6e5a3df577beb801ee16ad8c22"; // old IAI token address
         TARGET_TOKEN_ADDRESS = "0x438Ae65CD7CF1cE33279A4De4aB3281b14bdB3B4"; // new VRFI token address
+        TREASURY_WALLET = deployer.address; // admin/deployer wallet address
+    } else if (
+        targetNetwork === SupportNetworks.bscMainnet ||
+        targetNetwork === SupportNetworks.forkingBscMainnet
+    ) {
+        SOURCE_TOKEN_ADDRESS = ""; // old IAI token address
+        TARGET_TOKEN_ADDRESS = ""; // new VRFI token address
+        TREASURY_WALLET = deployer.address; // admin/deployer wallet address
+    } else if (
+        targetNetwork === SupportNetworks.bscTestnet ||
+        targetNetwork === SupportNetworks.forkingBscTestnet
+    ) {
+        SOURCE_TOKEN_ADDRESS = "0xc83E794e8BFFF40F752fb235927908C27306bd42"; // old IAI token address
+        TARGET_TOKEN_ADDRESS = "0xa776249E1F1685963258Bbf90501964B20081754"; // new VRFI token address
         TREASURY_WALLET = deployer.address; // admin/deployer wallet address
     }
 

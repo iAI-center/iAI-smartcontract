@@ -8,30 +8,6 @@ import {
 } from "./safe-change-network";
 import { VRFIPresale } from "../../typechain-types";
 
-interface Input {
-    presale: {
-        tokenPrice: string; // in ether
-        startTime: number; // unix timestamp
-        endTime: number; // unix timestamp
-        maxSaleAmount: string; // in ether
-        minPurchase: string; // in ether
-        revenueReceiver: string; // address to receive revenue
-        isWhitelistEnabled: boolean; // enable whitelist
-        defaultMaxUSDTPerUser: string; // in ether
-    };
-    newOwner: string; // address of new owner to tranfer ownsership to
-    generateNewWalletForTestUSDTHolder: boolean;
-}
-
-async function formatTokenAmount(
-    token: string,
-    amount: bigint
-): Promise<string> {
-    const tokenContract = await ethers.getContractAt("ERC20", token);
-    const decimals = await tokenContract.decimals();
-    return ethers.formatUnits(amount, decimals);
-}
-
 async function parseTokenAmount(
     token: string,
     amount: string
@@ -47,6 +23,11 @@ async function parseTokenAmount(
         SupportNetworks.polygonTestnet,
         SupportNetworks.forkingPolygonMainnet,
         SupportNetworks.forkingPolygonTestnet,
+
+        SupportNetworks.bscMainnet,
+        SupportNetworks.bscTestnet,
+        SupportNetworks.forkingBscMainnet,
+        SupportNetworks.forkingBscTestnet,
     ]);
     if (!targetNetwork) {
         console.error("No network selected. Exiting...");
@@ -137,6 +118,43 @@ async function parseTokenAmount(
         targetNetwork === SupportNetworks.forkingPolygonTestnet
     ) {
         usdtToken = "0x4E1610F4104e541B202eD8040a97e44245BB1Bd6";
+        vrfiPresaleToken = "";
+        revenueReceiver = "0x8ac5Ed65A272B0Ce945c379fb20466CA2b3BbE57";
+        tokenPrice = await parseTokenAmount(usdtToken, "0.06");
+        startTime = 0n;
+        endTime = 2840140800n;
+        maxSaleAmount = ethers.parseUnits(
+            "12500000.0",
+            VRFIPresaleTokenInfo.decimals
+        );
+        minPurchaseAmount = ethers.parseUnits(
+            "0.1",
+            VRFIPresaleTokenInfo.decimals
+        );
+        isWhitelistEnabled = true;
+        defaultUSDTMaxAmount = await parseTokenAmount(usdtToken, "1000000.0");
+        initOwnerAddress = "0x8ac5Ed65A272B0Ce945c379fb20466CA2b3BbE57";
+        VRFIPresaleTokenInfo.totalSupply = maxSaleAmount;
+    } else if (
+        targetNetwork === SupportNetworks.bscMainnet ||
+        targetNetwork === SupportNetworks.forkingBscMainnet
+    ) {
+        usdtToken = "";
+        vrfiPresaleToken = "";
+        revenueReceiver = "";
+        tokenPrice = 0n;
+        startTime = 0n;
+        endTime = 0n;
+        maxSaleAmount = 0n;
+        minPurchaseAmount = 0n;
+        isWhitelistEnabled = false;
+        defaultUSDTMaxAmount = 0n;
+        initOwnerAddress = "";
+    } else if (
+        targetNetwork === SupportNetworks.bscTestnet ||
+        targetNetwork === SupportNetworks.forkingBscTestnet
+    ) {
+        usdtToken = "0x481a5636d9738f691f08c6f8dAc8117742C664C1";
         vrfiPresaleToken = "";
         revenueReceiver = "0x8ac5Ed65A272B0Ce945c379fb20466CA2b3BbE57";
         tokenPrice = await parseTokenAmount(usdtToken, "0.06");

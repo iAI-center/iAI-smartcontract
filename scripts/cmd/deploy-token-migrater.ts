@@ -30,6 +30,7 @@ async function main() {
     let SOURCE_TOKEN_ADDRESS = "0x..."; // Replace with actual source token address (IAI)
     let TARGET_TOKEN_ADDRESS = "0x..."; // Replace with actual target token address (VRFI)
     let TREASURY_WALLET = "0x..."; // Replace with actual treasury wallet address
+    let INIT_OWNER = "0x";
     if (
         targetNetwork === SupportNetworks.polygonMainnet ||
         targetNetwork === SupportNetworks.forkingPolygonMainnet
@@ -37,6 +38,7 @@ async function main() {
         SOURCE_TOKEN_ADDRESS = "";
         TARGET_TOKEN_ADDRESS = "";
         TREASURY_WALLET = "";
+        INIT_OWNER = deployer.address; // admin/deployer wallet address
     } else if (
         targetNetwork === SupportNetworks.polygonTestnet ||
         targetNetwork === SupportNetworks.forkingPolygonTestnet
@@ -44,13 +46,15 @@ async function main() {
         SOURCE_TOKEN_ADDRESS = "0x1b8cbfbdeab06e6e5a3df577beb801ee16ad8c22"; // old IAI token address
         TARGET_TOKEN_ADDRESS = "0x438Ae65CD7CF1cE33279A4De4aB3281b14bdB3B4"; // new VRFI token address
         TREASURY_WALLET = deployer.address; // admin/deployer wallet address
+        INIT_OWNER = deployer.address; // admin/deployer wallet address
     } else if (
         targetNetwork === SupportNetworks.bscMainnet ||
         targetNetwork === SupportNetworks.forkingBscMainnet
     ) {
-        SOURCE_TOKEN_ADDRESS = ""; // old IAI token address
-        TARGET_TOKEN_ADDRESS = ""; // new VRFI token address
-        TREASURY_WALLET = deployer.address; // admin/deployer wallet address
+        SOURCE_TOKEN_ADDRESS = "0x1eC58Fe5e681E35e490B5D4cBECdF42B29C1B063"; // old IAI token address
+        TARGET_TOKEN_ADDRESS = "0xdDa7Ab46d5139e114A38A1AdAA5d8ca299c87479"; // new VRFI token address
+        TREASURY_WALLET = "0x9aFbEaFcC03e8308738e5E6D906a3816994620D5"; // admin/deployer wallet address
+        INIT_OWNER = "0xaf6D06B03b609AE796Ae94F724124BADD0AFC053"; // admin/deployer wallet address
     } else if (
         targetNetwork === SupportNetworks.bscTestnet ||
         targetNetwork === SupportNetworks.forkingBscTestnet
@@ -58,12 +62,14 @@ async function main() {
         SOURCE_TOKEN_ADDRESS = "0xc83E794e8BFFF40F752fb235927908C27306bd42"; // old IAI token address
         TARGET_TOKEN_ADDRESS = "0xa776249E1F1685963258Bbf90501964B20081754"; // new VRFI token address
         TREASURY_WALLET = deployer.address; // admin/deployer wallet address
+        INIT_OWNER = deployer.address; // admin/deployer wallet address
     }
 
     {
         console.log("Source Token:", SOURCE_TOKEN_ADDRESS);
         console.log("Target Token:", TARGET_TOKEN_ADDRESS);
         console.log("Treasury Wallet:", TREASURY_WALLET);
+        console.log("Initial Owner:", INIT_OWNER);
         console.log(`--------------------------------------------------`);
     }
 
@@ -107,7 +113,7 @@ async function main() {
         TARGET_TOKEN_ADDRESS,
         TREASURY_WALLET,
         DEFAULT_MIGRATION_LIMIT,
-        deployer.address
+        INIT_OWNER
     );
 
     await tokenMigrater.waitForDeployment();

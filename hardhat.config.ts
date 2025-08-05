@@ -74,7 +74,7 @@ const config: HardhatUserConfig = {
         forkingBscMainnet: {
             ...networkBscMainnet,
             url: "http://127.0.0.1:8545",
-        },
+        } as HardhatNetworkUserConfig,
         baseMainnet: {
             ...networkBaseMainnet,
         },

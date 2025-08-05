@@ -46,6 +46,9 @@ async function main(): Promise<void> {
 
     const adminWallet = await hre.ethers.provider.getSigner();
     const adminWalletAddress = await adminWallet.getAddress();
+    const balanceBefore = await hre.ethers.provider.getBalance(
+        adminWalletAddress
+    );
 
     const VRFIToken = await ethers.getContractFactory("VRFIToken");
     const deployed = await VRFIToken.deploy(
@@ -59,6 +62,27 @@ async function main(): Promise<void> {
         `deployed VRFI Token contract to: ${deployedAddress} on ${targetNetwork} ...done with tx: ${deployedTx?.hash}`
     );
     cliHelper.writeHLine();
+
+    const balanceAfter = await hre.ethers.provider.getBalance(
+        adminWalletAddress
+    );
+    const balanceDiff = balanceBefore - balanceAfter;
+    console.log(
+        `admin wallet balance before: ${ethers.formatEther(
+            balanceBefore
+        )} (${balanceBefore.toString()}) after: ${ethers.formatEther(
+            balanceAfter
+        )} (${balanceAfter.toString()}) diff: ${ethers.formatEther(
+            balanceDiff
+        )} (${balanceDiff.toString()})`
+    );
+
+    const vrfiTokenBalance = await deployed.balanceOf(adminWalletAddress);
+    console.log(
+        `admin wallet VRFI Token balance: ${ethers.formatEther(
+            vrfiTokenBalance
+        )} (${vrfiTokenBalance.toString()})`
+    );
 
     // make output dir ...
     const outDir = cliHelper.ensureCommandOutputDirExists("deploy-vrfi-token");

@@ -154,8 +154,9 @@ async function parseTokenAmount(
         targetNetwork === SupportNetworks.bscTestnet ||
         targetNetwork === SupportNetworks.forkingBscTestnet
     ) {
+        const vrfiToken = "0xa776249E1F1685963258Bbf90501964B20081754";
         usdtToken = "0x481a5636d9738f691f08c6f8dAc8117742C664C1";
-        vrfiPresaleToken = "";
+        vrfiPresaleToken = vrfiToken; // since 2025-07-09: we use VRFI token as presale token
         revenueReceiver = "0x8ac5Ed65A272B0Ce945c379fb20466CA2b3BbE57";
         tokenPrice = await parseTokenAmount(usdtToken, "0.06");
         startTime = 0n;

@@ -721,9 +721,6 @@ async function parseTokenAmount(
             );
         }
 
-        console.log(
-            `mint more presale token and transfer to presale contract ...`
-        );
         console.log(`transfer VRFI to presale contract ...`);
         {
             const transferTx = await vrfiToken
@@ -743,5 +740,80 @@ async function parseTokenAmount(
         }
 
         await testBuy(ethers.parseUnits("0.015", await usdt.decimals()));
+
+        console.log(`premature withdraw ...`);
+        {
+            const bp = await vrfiToken.balanceOf(presale.target);
+            const ba = await vrfiToken.balanceOf(admin.address);
+
+            console.log(`pause ...`);
+            await presale.connect(admin).pause();
+            console.log(`... paused`);
+
+            await presale
+                .connect(admin)
+                .prematureWithdrawPresaleTokens(
+                    await parseTokenAmount(vrfiToken.target.toString(), "1000")
+                );
+            const ap = await vrfiToken.balanceOf(presale.target);
+            const aa = await vrfiToken.balanceOf(admin.address);
+            console.log(
+                "admin vrfi changed:",
+                ethers.formatEther(ba),
+                "=>",
+                ethers.formatEther(aa)
+            );
+            console.log(
+                `presale vrfi changed:", ${ethers.formatEther(
+                    bp
+                )}, "=>", ${ethers.formatEther(ap)}`
+            );
+
+            console.log(`resume ...`);
+            await presale.connect(admin).unpause();
+            console.log(`... resumed`);
+        }
+
+        await testBuy(ethers.parseUnits("0.015", await usdt.decimals()));
+
+        console.log(`withdraw unsold tokens ...`);
+        {
+            const price = await presale.tokenPrice();
+            const startTime = await presale.startTime();
+            const endTime = await presale.endTime();
+            const maxSaleAmount = await presale.maxSaleAmount();
+            const whitelistEnabled = await presale.isWhitelistEnabled();
+            console.log(`force end preiod`);
+            const bn = await ethers.provider.getBlockNumber();
+            const b = await ethers.provider.getBlock(bn);
+            if (!b) throw Error(`Failed to get block`);
+            await presale
+                .connect(admin)
+                .updatePresaleConfig(
+                    price,
+                    startTime,
+                    b.timestamp - 1000,
+                    maxSaleAmount,
+                    whitelistEnabled
+                );
+            console.log(`... forced ended`);
+
+            const bp = await vrfiToken.balanceOf(presale.target);
+            const ba = await vrfiToken.balanceOf(admin.address);
+            await presale.connect(admin).withdrawUnsoldPresaleTokens();
+            const ap = await vrfiToken.balanceOf(presale.target);
+            const aa = await vrfiToken.balanceOf(admin.address);
+            console.log(
+                "admin vrfi changed:",
+                ethers.formatEther(ba),
+                "=>",
+                ethers.formatEther(aa)
+            );
+            console.log(
+                `presale vrfi changed:", ${ethers.formatEther(
+                    bp
+                )}, "=>", ${ethers.formatEther(ap)}`
+            );
+        }
     }
 })();

@@ -73,6 +73,7 @@ const config: HardhatUserConfig = {
         },
         forkingBscMainnet: {
             ...networkBscMainnet,
+            accounts: undefined, // unset accounts to allow using impersonate account
             url: "http://127.0.0.1:8545",
         } as HardhatNetworkUserConfig,
         baseMainnet: {

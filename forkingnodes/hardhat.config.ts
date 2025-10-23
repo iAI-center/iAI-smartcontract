@@ -37,6 +37,12 @@ const config: HardhatUserConfig = {
                         london: 2000000,
                     },
                 },
+                97: {
+                    hardforkHistory: {
+                        berlin: 1000000,
+                        london: 2000000,
+                    },
+                },
             },
             from: process.env.WALLET_ADDRESS,
             accounts: [

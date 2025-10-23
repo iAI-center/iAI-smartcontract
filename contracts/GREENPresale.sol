@@ -144,17 +144,19 @@ contract GREENPresale is Ownable, ReentrancyGuard, Pausable {
             "Below minimum purchase amount"
         );
 
-        // Updated spending limit handling:
-        uint256 userLimit = whitelistUSDTMaxAmount[msg.sender];
-        if (userLimit == 0) {
-            userLimit = defaultUSDTMaxAmount;
-        }
-        // If a spending limit is set (non-zero), enforce it
-        if (userLimit > 0) {
-            require(
-                userTotalUSDTSpent[msg.sender] + usdtAmount <= userLimit,
-                "Exceeds total allowed USDT spending amount"
-            );
+        // Spending limit handling: enforce only when whitelist mode is enabled
+        if (isWhitelistEnabled) {
+            uint256 userLimit = whitelistUSDTMaxAmount[msg.sender];
+            if (userLimit == 0) {
+                userLimit = defaultUSDTMaxAmount;
+            }
+            // If a spending limit is set (non-zero), enforce it
+            if (userLimit > 0) {
+                require(
+                    userTotalUSDTSpent[msg.sender] + usdtAmount <= userLimit,
+                    "Exceeds total allowed USDT spending amount"
+                );
+            }
         }
 
         require(

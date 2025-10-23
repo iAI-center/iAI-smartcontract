@@ -93,10 +93,10 @@ async function parseTokenAmount(
      */
     let initOwnerAddress = "";
     const GREENPresaleTokenInfo = {
-        name: "GREEN Presale Token",
-        symbol: "GREEN Presale",
+        name: "Green Token",
+        symbol: "GREEN",
         decimals: 18,
-        totalSupply: ethers.parseUnits("6500000.0", 18),
+        totalSupply: ethers.parseUnits("1000000000", 18),
     };
 
     if (
@@ -135,7 +135,6 @@ async function parseTokenAmount(
         isWhitelistEnabled = true;
         defaultUSDTMaxAmount = await parseTokenAmount(usdtToken, "1000000.0");
         initOwnerAddress = "0x8ac5Ed65A272B0Ce945c379fb20466CA2b3BbE57";
-        GREENPresaleTokenInfo.totalSupply = maxSaleAmount;
     } else if (
         targetNetwork === SupportNetworks.bscMainnet ||
         targetNetwork === SupportNetworks.forkingBscMainnet
@@ -155,15 +154,11 @@ async function parseTokenAmount(
         isWhitelistEnabled = false; // not required whitelisting
         defaultUSDTMaxAmount = 2n ** 256n - 1n; // likely unlimit
         initOwnerAddress = "0xaf6D06B03b609AE796Ae94F724124BADD0AFC053"; // admin address
-        GREENPresaleTokenInfo.totalSupply = ethers.parseUnits(
-            "500000.0",
-            GREENPresaleTokenInfo.decimals
-        );
     } else if (
         targetNetwork === SupportNetworks.bscTestnet ||
         targetNetwork === SupportNetworks.forkingBscTestnet
     ) {
-        const greenToken = "0x"; // TODO: Update with actual GREEN token address on BSC Testnet
+        const greenToken = "0x4D2719bD0EcC02dA20B4c6A43ddc4F9be1d938c7"; // TODO: Update with actual GREEN token address on BSC Testnet
         usdtToken = "0x481a5636d9738f691f08c6f8dAc8117742C664C1";
         greenPresaleToken = greenToken; // use GREEN token as presale token
         revenueReceiver = "0x8ac5Ed65A272B0Ce945c379fb20466CA2b3BbE57";
@@ -181,7 +176,6 @@ async function parseTokenAmount(
         isWhitelistEnabled = true;
         defaultUSDTMaxAmount = await parseTokenAmount(usdtToken, "1000000.0");
         initOwnerAddress = "0x8ac5Ed65A272B0Ce945c379fb20466CA2b3BbE57";
-        GREENPresaleTokenInfo.totalSupply = maxSaleAmount;
     }
 
     // checking usdt decimals
@@ -201,6 +195,9 @@ async function parseTokenAmount(
     const deployerBalanceBefore = await ethers.provider.getBalance(deployer);
 
     if (!greenPresaleToken) {
+        throw new Error(
+            "GREENPresaleToken does not support in this deployment."
+        );
         console.log(`deploying Presale Token to ${targetNetwork}...`);
         const confirmed = await cliHelper.confirmPromptMessage(
             "Since deployedPresaleTokenAddr is not specified, this will deploy GREENPresaleToken contract. Do you want to continue?"
@@ -232,9 +229,9 @@ async function parseTokenAmount(
         console.log(
             `using existing GREENPresaleToken address: ${greenPresaleToken}`
         );
-        console.log(`checking deployed GREENPresaleToken contract...`);
+        console.log(`checking Presale token should be GREEN Token contract...`);
         const PresaleToken = await ethers.getContractAt(
-            "GREENPresaleToken",
+            "GREENToken",
             greenPresaleToken
         );
         const name = await PresaleToken.name();
@@ -393,10 +390,7 @@ async function parseTokenAmount(
     // Flatten contract files
     const contractsPath = "../../contracts";
     await Promise.all(
-        [
-            path.join(contractsPath, "GREENPresaleToken.sol"),
-            path.join(contractsPath, "GREENPresale.sol"),
-        ].map((contractPath) =>
+        [path.join(contractsPath, "GREENPresale.sol")].map((contractPath) =>
             cliHelper.flattenSolidity2File(
                 [contractPath],
                 outDir,
@@ -406,11 +400,7 @@ async function parseTokenAmount(
     );
 
     // running test only on Forking node
-    if (
-        targetNetwork === SupportNetworks.forkingPolygonTestnet ||
-        targetNetwork === SupportNetworks.polygonTestnet ||
-        targetNetwork === SupportNetworks.forkingBscMainnet
-    ) {
+    if (targetNetwork === SupportNetworks.forkingBscMainnet) {
         console.log(`======================================================`);
         console.log("running test on forking node ...");
         const usdt = await ethers.getContractAt("ERC20", usdtToken, deployer);

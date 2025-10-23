@@ -47,6 +47,7 @@ const config: HardhatUserConfig = {
             "contracts/VRFIPresaleToken.sol": SOLC_0_8_27_NO_OPTIMIZER,
             "contracts/GREENToken.sol": SOLC_0_8_27_NO_OPTIMIZER,
             "contracts/GREENPresaleToken.sol": SOLC_0_8_27_NO_OPTIMIZER,
+            "contracts/GREENPresale.sol": SOLC_0_8_27_NO_OPTIMIZER,
         },
     },
     networks: {

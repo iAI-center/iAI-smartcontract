@@ -173,7 +173,7 @@ async function parseTokenAmount(
             "0.1",
             GREENPresaleTokenInfo.decimals
         );
-        isWhitelistEnabled = true;
+        isWhitelistEnabled = false;
         defaultUSDTMaxAmount = await parseTokenAmount(usdtToken, "1000000.0");
         initOwnerAddress = "0x8ac5Ed65A272B0Ce945c379fb20466CA2b3BbE57";
     }
